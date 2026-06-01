@@ -1,31 +1,18 @@
 import os
 import sys
 
-# Define the path to godot-cpp
-godot_cpp_path = os.path.join(os.getcwd(), "godot-cpp")
-sys.path.insert(0, godot_cpp_path)
+# Initialize the godot-cpp environment using its own SConstruct helper
+env = SConscript("godot-cpp/SConstruct")
 
-# Import the SCons tools from godot-cpp
-from godot_cpp import *
+# Add your source files
+sources = Glob("src/cpp/*.cpp")
 
-# Initialize the environment
-env = Environment(
-    tools=["default"],
-    toolpath=[godot_cpp_path],
+# Build the shared library
+env.Append(CPPPATH=["src/cpp"])
+
+library = env.SharedLibrary(
+    "bin/libaevoria{}{}".format(env["suffix"], env["SHLIBSUFFIX"]),
+    source=sources,
 )
 
-# Add godot-cpp include path
-env.Append(CPPPATH=[os.path.join(godot_cpp_path, "include")])
-
-# Compile the GDNative library
-env.GdnativeLibrary(
-    target="libaevoria",
-    source=[
-        "src/cpp/direct_democracy_os.cpp",
-        "src/cpp/resource_commons.cpp",
-    ],
-    cppdefines=["GODOT_CPP"],
-    cpppath=["src/cpp"],
-    libpath=[os.path.join(godot_cpp_path, "lib")],
-    bindirs=[os.path.join(godot_cpp_path, "bin")],
-)
+Default(library)
