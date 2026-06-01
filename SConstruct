@@ -1,12 +1,11 @@
 import os
 import sys
 
-from SCons.Script import *
-
-# Add the godot-cpp bindings to the path
+# Define the path to godot-cpp
 godot_cpp_path = os.path.join(os.getcwd(), "godot-cpp")
 sys.path.insert(0, godot_cpp_path)
 
+# Import the SCons tools from godot-cpp
 from godot_cpp import *
 
 # Initialize the environment
@@ -15,11 +14,10 @@ env = Environment(
     toolpath=[godot_cpp_path],
 )
 
-env.Append(CPPFLAGS=["-std=c++17"])
-env.Append(LIBPATH=["#lib"])
-env.Append(LINKFLAGS=["-lgdnative"])
+# Add godot-cpp include path
+env.Append(CPPPATH=[os.path.join(godot_cpp_path, "include")])
 
-# Compile the C++ bindings
+# Compile the GDNative library
 env.GdnativeLibrary(
     target="libaevoria",
     source=[
@@ -27,9 +25,7 @@ env.GdnativeLibrary(
         "src/cpp/resource_commons.cpp",
     ],
     cppdefines=["GODOT_CPP"],
-    cpppath=["src/cpp", godot_cpp_path + "/include"],
-    libpath=[godot_cpp_path + "/lib"],
-    bindirs=[godot_cpp_path + "/bin"],
+    cpppath=["src/cpp"],
+    libpath=[os.path.join(godot_cpp_path, "lib")],
+    bindirs=[os.path.join(godot_cpp_path, "bin")],
 )
-
-
