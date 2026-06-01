@@ -24,11 +24,11 @@ void uninitialize_aevoria_module(ModuleInitializationLevel p_level) {
 
 extern "C" {
 GDExtensionBool GDE_EXPORT gdextension_init(
-    GDExtensionInterfaceGetProcAddress p_get_proc_address,
+    const GDExtensionInterface *p_interface,
     const GDExtensionClassLibraryPtr p_library,
     GDExtensionInitialization *r_initialization)
 {
-    godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+    godot::GDExtensionBinding::InitObject init_obj(p_interface, p_library, r_initialization);
     init_obj.register_initializer(initialize_aevoria_module);
     init_obj.register_terminator(uninitialize_aevoria_module);
     init_obj.set_minimum_library_initialization_level(MODULE_INITIALIZATION_LEVEL_SCENE);
