@@ -5,7 +5,7 @@ import sys
 env = SConscript("godot-cpp/SConstruct")
 
 # Add your source files
-sources = Glob("src/cpp/*.cpp")
+sources = Glob("src/cpp/*.cpp")  # already picks up register_types.cpp automatically
 
 # Build the shared library
 env.Append(CPPPATH=["src/cpp"])
