@@ -3,7 +3,7 @@
 #include "direct_democracy_os.h"
 #include "resource_commons.h"
 
-#include <godot_cpp/gdextension_interface.h>
+#include <gdextension/gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
