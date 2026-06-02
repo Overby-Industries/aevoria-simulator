@@ -1,9 +1,35 @@
 {
-  "type": "vote_cast",
-  "payload": {
-    "proposalId": "PROP-7842",
-    "voterId": "citizen-3941",
-    "vote": "for" | "against" |  "abstain",
-    "reason": "optional string"
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "vote_cast"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "proposalId": {
+          "type": "string"
+        },
+        "voterId": {
+          "type": "string"
+        },
+        "vote": {
+          "type": "string",
+          "enum": [
+            "for",
+            "against",
+            "abstain"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "proposalId",
+        "voterId",
+        "vote"
+      ]
+    }
   }
 }

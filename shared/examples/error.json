@@ -1,8 +1,28 @@
 {
-  "type": "error",
-  "payload": {
-    "code": "INVALID_PROPOSAL" | "FSM_REJECTED" | "RATE_LIMITED",
-    "message": "Human readable explanation",
-    "field": "optional field name"
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "error"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "INVALID_PROPOSAL",
+            "FSM_REJECTED",
+            "RATE_LIMITED"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "field": {
+          "type": "string"
+        }
+      },
+      "required": ["code", "message"]
+    }
   }
 }
