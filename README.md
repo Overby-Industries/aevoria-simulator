@@ -10,6 +10,25 @@
 
 Welcome to **Aevoria**, the ultimate adversarial sandbox for the **Code of Universe Regulations (CUR)**. 
 
+| Element | Value |
+|---|---|
+| Civilization Name | Aevoria |
+| Full Formal Name | The Aevoric Commonwealth |
+| Demonym | Avian / Avians |
+| Formal Adjective | Aevoric |
+| Motto (Latin) | Per Avia, Ad Astra |
+| Motto (English) | Through Flight, To the Stars |
+| Capital | Keefe Station |
+| Head of State Title | Prime Convener of the Aevoric Commonwealth |
+| Founding Date | 20 May 2026 — Day 1, Year 1 Aevoric Era |
+| Calendar Notation | A.E. (Aevoric Era) |
+| First Sector | Sector Avia |
+| Highest Civic Honor | The Ascending Arc Medal |
+| National Colors | Midnight Blue, Sunrise Gold, Cloud White |
+| Emblem | The Ascending Arc |
+
+![Aevoria](aevoria.png)
+
 Aevoria is not just a space mining game; it is a high-fidelity governance simulator. You will command an SSTO (Single-Stage-To-Orbit) asteroid mining heavy-lift fleet, deploy ethical AI miner swarms, and build a zero-waste interplanetary civilization. But the vacuum of space isn't your biggest threat. 
 
 **Your democracy is under attack.** 
