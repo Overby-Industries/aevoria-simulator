@@ -8,7 +8,7 @@
 
 > *"We are not just building a civilization in space. We are stress-testing the ethics that will keep it from tearing itself apart."*
 
-Welcome to **Aevoria**, the ultimate adversarial sandbox for the **Code of Universe Regulations (CUR)**. 
+Welcome to **Aevoria**, the ultimate adversarial sandbox for the **[Code of Universe Regulations (CUR)](https://github.com/Overby-Industries/code-of-universe-regulations)**. 
 
 | Element | Value |
 |---|---|
