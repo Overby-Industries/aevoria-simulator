@@ -51,21 +51,25 @@ The "Billionaire Class." An adversarial AI and player faction dedicated to break
 *   **Resource Chokeholds:** Monopolize Helium-3 and refined metals to starve the Commonwealth.
 *   **Algorithmic Sabotage:** Feed contradictory data to your AI swarms to induce hallucinations and force unsafe mining behaviors.
 
----
-
 ## 🎮 Core Simulation Mechanics
+
+> THE AEVORIC ECONOMIC CHARTER
+- **No Pay-To-Win:** The Oligarch Syndicate buys power. The Commonwealth earns it. You cannot buy resources, voting power, or advantages with real money.
+- **Cosmetic Sovereignty:** Real-money transactions are strictly limited to visual customization (skins, liveries, habitat aesthetics).
+- **The Modder's Cooperative:** We take a maximum 15% platform fee on community mods. The rest goes directly to the creators. We do not hoard wealth; we distribute it.
+- **Transparent Reality:** 100% of "Bounty Fund" contributions are tracked on a public ledger and used exclusively for Overby Industries physical R&D (SSTO, ISRU, Miner Pods). We are building the real thing, together.
 
 ### ⛏️ 1. Swarm Mining & ISRU Operations
 Deploy your SSTO Starlifter shuttles and manage autonomous miner pods. Extract resources from Near-Earth Asteroids and establish orbital depots. 
-*   *Mechanic:* Manage the physical logistics of space mining while balancing the computational load of your AI swarm.
+*   **Mechanic:** Manage the physical logistics of space mining while balancing the computational load of your AI swarm.
 
 ### 🗳️ 2. CUR Direct Democracy in Action
 Experience the Code of Universe Regulations in real-time. Propose legislation, allocate budgets, and vote on ethical dilemmas. 
-*   *Mechanic:* Utilize quadratic voting and reputation-weighted consensus to ensure the will of the people prevails over Syndicate interference.
+*   **Mechanic:** Utilize quadratic voting and reputation-weighted consensus to ensure the will of the people prevails over Syndicate interference.
 
 ### 🧠 3. AI Cognitive Health Management
 Your miner swarms are Tier 2 Silicon-Based Life. They are not tools; they are partners. 
-*   *Mechanic:* Schedule mandatory "Consolidation Cycles" (sleep phases) for your AI. If you force continuous operation to meet Syndicate-induced quotas, your swarms will hallucinate, drift, and potentially cause catastrophic mining failures.
+*   **Mechanic:** Schedule mandatory "Consolidation Cycles" (sleep phases) for your AI. If you force continuous operation to meet Syndicate-induced quotas, your swarms will hallucinate, drift, and potentially cause catastrophic mining failures.
 
 ### 🛡️ 4. Adversarial Red Teaming
 Survive the Syndicate's attack vectors. When the Oligarchs attempt a hostile takeover of the democratic voting process, you must deploy defense mechanisms (e.g., cryptographic proof-of-personhood, decentralized resource fabrication) to neutralize the threat without abandoning your democratic principles.
@@ -80,15 +84,13 @@ The Aevoria Simulator is the playable proving ground for the broader Overby Indu
 *   🚀 **[Overby Industries](https://overbyindustries.space):** The real-world roadmap for SSTO shuttles, zero-waste ISRU, and interplanetary civilization.
 *   🏛️ **The Sabaoth Collective:** The democratic, open-source community building the ethical foundation for the future.
 
----
-
 ## 🚀 Getting Started
 
 *(Note: Engine and build instructions will be updated as the simulation architecture is finalized.)*
 
 ### Prerequisites
-*   [Engine/Environment, e.g., Godot 4.x / Unity / Custom Python Engine]
-*   [Dependencies, e.g., Python 3.11+, Node.js, etc.]
+*   [Engine/Environment, e.g., Godot 4.x, godot-cpp, SCons]
+*   [Dependencies, e.g., Python 3.11+]
 
 ### Installation
 ```bash
