@@ -1,0 +1,12 @@
+{
+  "type": "vote_results",
+  "payload": {
+    "proposalId": "PROP-7842",
+    "totalVotes": 1247,
+    "for": 892,
+    "against": 312,
+    "abstain": 43,
+    "passed": true,
+    "fsmValidation": "passed"
+  }
+}

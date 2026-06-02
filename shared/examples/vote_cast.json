@@ -1,0 +1,9 @@
+{
+  "type": "vote_cast",
+  "payload": {
+    "proposalId": "PROP-7842",
+    "voterId": "citizen-3941",
+    "vote": "for" | "against" |  "abstain",
+    "reason": "optional string"
+  }
+}

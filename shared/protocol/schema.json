@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aevoria Simulator Protocol",
+  "version": "1.0.1",
+  "description": "Shared JSON communication protocol between Godot simulator and Web browser mirror",
+  "type": "object",
+  "required": ["type", "version", "timestamp", "source", "payload"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "proposal_submit",
+        "proposal_update",
+        "vote_cast",
+        "vote_results",
+        "fsm_state_update",
+        "fsm_fault",
+        "fsm_protected_mode",
+        "fsm_recovery",
+        "mining_update",
+        "economy_update",
+        "faction_activity",
+        "simulation_tick",
+        "citizen_action",
+        "audit_request",
+        "sanction_proposed",
+        "error"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^0\\.[0-9]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["godot", "web", "simulation-core"]
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "proposal_submit" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["proposalId", "title", "description", "category", "proposedBy"],
+            "properties": {
+              "proposalId": { "type": "string" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "category": { "type": "string" },
+              "proposedBy": { "type": "string" },
+              "type": { "type": "string", "enum": ["Type-A", "Type-B", "Type-C"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "vote_cast" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["proposalId", "voterId", "vote"],
+            "properties": {
+              "proposalId": { "type": "string" },
+              "voterId": { "type": "string" },
+              "vote": { "type": "string", "enum": ["for", "against", "abstain"] },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "fsm_fault" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["faultId", "category", "description", "actionTaken"],
+            "properties": {
+              "faultId": { "type": "string" },
+              "category": { "type": "string" },
+              "description": { "type": "string" },
+              "affectedDomain": { "type": "string" },
+              "actionTaken": { "type": "string" },
+              "protectedModeDuration": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "mining_update" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["helgaStatus", "minerSwarmsActive"],
+            "properties": {
+              "helgaStatus": { "type": "string" },
+              "minerSwarmsActive": { "type": "integer" },
+              "resourcesExtracted": { "type": "object" },
+              "containmentIntegrity": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "error" } } },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "field": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

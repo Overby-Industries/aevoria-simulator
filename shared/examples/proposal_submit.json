@@ -1,0 +1,11 @@
+{
+  "type": "proposal_submit",
+  "payload": {
+    "proposalId": "PROP-7842",
+    "title": "Increase Commons Reserve contribution from mining",
+    "description": "...",
+    "category": "economy",
+    "proposedBy": "citizen-3941",
+    "type": "Type-B"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "economy_update",
+  "version": "1.0.1",
+  "timestamp": "2026-05-19T15:45:22Z",
+  "source": "godot",
+  "payload": {
+    "commonsReserve": 1248750,
+    "dividendPerCitizen": 245,
+    "resources": {
+      "nickelIron": 458920,
+      "pgms": 1240,
+      "volatiles": 87340
+    },
+    "giniCoefficient": 0.21,
+    "corruptionIndex": 0.04
+  }
+}

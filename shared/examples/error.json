@@ -1,0 +1,8 @@
+{
+  "type": "error",
+  "payload": {
+    "code": "INVALID_PROPOSAL" | "FSM_REJECTED" | "RATE_LIMITED",
+    "message": "Human readable explanation",
+    "field": "optional field name"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "faction_activity",
+  "version": "0.2",
+  "timestamp": "2026-05-19T15:47:10Z",
+  "source": "simulation-core",
+  "payload": {
+    "factionId": "billionaire-syndicate-01",
+    "actionType": "capture_attempt",
+    "target": "General_Assembly",
+    "severity": "high",
+    "successProbability": 0.42,
+    "fsmResponse": "fault_triggered"
+  }
+}
