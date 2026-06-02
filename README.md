@@ -101,3 +101,16 @@ cd aevoria-simulator
 
 # Launch the simulation
 [Insert launch command here]
+```
+
+## 🛠️ Contributing to the Simulation
+This is an open-source, democratic project. We need Red Teamers, Governance Designers, and AI Ethicists.
+- **Propose an Attack Vector:** Think of a new way the Oligarch Syndicate could corrupt the CUR? Open an Issue under the `red-team` label.
+- **Design a Defense Mechanism:** Have a cryptographic or governance solution to stop regulatory capture? Submit a Pull Request to the `DEFENSE_MECHANISMS.md` file.
+- **Read the Framework:** Ensure all gameplay mechanics align with the [Rights for All Life](https://github.com/Overby-Industries/rights-for-all-life) framework.
+See `CONTRIBUTING.md` for full guidelines.
+## ⚖️ License
+This project is released under the **Creative Commons Zero v1.0 Universal (CC0 1.0)** license.
+You can copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission.
+
+*Build the future. Defend the democracy. See you in the stars.* 🌌✨
