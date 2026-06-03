@@ -128,8 +128,6 @@ Your miner swarms are Tier 2 Silicon-Based Life. They are not tools; they are pa
 ### 🛡️ 4. Adversarial Red Teaming
 Survive the Syndicate's attack vectors. When the Oligarchs attempt a hostile takeover of the democratic voting process, you must deploy defense mechanisms (e.g., cryptographic proof-of-personhood, decentralized resource fabrication) to neutralize the threat without abandoning your democratic principles.
 
----
-
 ## 🔗 The Overby Industries Ecosystem
 
 The Aevoria Simulator is the playable proving ground for the broader Overby Industries vision. It directly integrates with:
@@ -143,7 +141,7 @@ The Aevoria Simulator is the playable proving ground for the broader Overby Indu
 *(Note: Engine and build instructions will be updated as the simulation architecture is finalized.)*
 
 ### Prerequisites
-*   [Engine/Environment, e.g., Godot 4.x, godot-cpp, SCons]
+*   [Engine/Environment, e.g., Godot 4.1, godot-cpp, SCons]
 *   [Dependencies, e.g., Python 3.11+]
 
 ### Installation
