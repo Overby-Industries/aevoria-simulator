@@ -6,13 +6,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export default function AevoriaScene() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || initialized) return;
-
-    const container = containerRef.current;
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -22,7 +19,7 @@ export default function AevoriaScene() {
     // Camera
     const camera = new THREE.PerspectiveCamera(
       60,
-      container.clientWidth / container.clientHeight,
+      window.innerWidth / window.innerHeight,
       0.1,
       1000
     );
@@ -31,16 +28,10 @@ export default function AevoriaScene() {
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    rendererRef.current = renderer;
-    
-    // Clear any existing children and append
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
-    container.appendChild(renderer.domElement);
+    containerRef.current.appendChild(renderer.domElement);
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0x333366, 0.5);
@@ -106,9 +97,8 @@ export default function AevoriaScene() {
     controls.update();
 
     // Animation loop
-    let animationId: number;
     function animate() {
-      animationId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
       ring.rotation.y += 0.002;
       station.rotation.y -= 0.001;
       stars.rotation.y += 0.0001;
@@ -119,10 +109,9 @@ export default function AevoriaScene() {
 
     // Handle window resize
     function onResize() {
-      if (!container || !renderer) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight);
     }
     window.addEventListener('resize', onResize);
 
@@ -130,110 +119,108 @@ export default function AevoriaScene() {
 
     return () => {
       window.removeEventListener('resize', onResize);
-      cancelAnimationFrame(animationId);
-      controls.dispose();
       renderer.dispose();
-      if (container && renderer.domElement.parentNode === container) {
-        container.removeChild(renderer.domElement);
+      if (containerRef.current) {
+        containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [initialized]);
+  }, [containerRef, initialized]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Nav Overlay */}
+  <div ref={containerRef} style={{ width: '100%', height: '100vh', position: 'relative' }}>
+    {/* Nav Overlay */}
+    <div style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      padding: '24px 32px',
+      pointerEvents: 'none',
+      zIndex: 10,
+    }}>
       <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
         display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        padding: '24px 32px',
-        pointerEvents: 'none',
-        zIndex: 10,
+        flexDirection: 'column',
+        gap: '4px',
       }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
+        <h1 style={{
+          margin: 0,
+          fontSize: '28px',
+          fontWeight: 300,
+          letterSpacing: '6px',
+          color: '#ffffff',
+          textShadow: '0 0 20px rgba(100, 150, 255, 0.5)',
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
         }}>
-          <h1 style={{
-            margin: 0,
-            fontSize: '28px',
-            fontWeight: 300,
-            letterSpacing: '6px',
-            color: '#ffffff',
-            textShadow: '0 0 20px rgba(100, 150, 255, 0.5)',
-            fontFamily: "'Segoe UI', system-ui, sans-serif",
-          }}>
-            AEVORIA
-          </h1>
-          <p style={{
-            margin: 0,
-            fontSize: '13px',
-            fontWeight: 300,
-            letterSpacing: '4px',
-            color: 'rgba(180, 200, 255, 0.7)',
-            fontFamily: "'Segoe UI', system-ui, sans-serif",
-            fontStyle: 'italic',
-          }}>
-            Per Avia, Ad Astra
-          </p>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: '12px',
-          pointerEvents: 'auto',
+          AEVORIA
+        </h1>
+        <p style={{
+          margin: 0,
+          fontSize: '13px',
+          fontWeight: 300,
+          letterSpacing: '4px',
+          color: 'rgba(180, 200, 255, 0.7)',
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          fontStyle: 'italic',
         }}>
-          <span style={{
-            fontSize: '11px',
-            letterSpacing: '3px',
-            color: 'rgba(255, 255, 255, 0.4)',
-            fontFamily: 'monospace',
-            textTransform: 'uppercase',
-          }}>
-            Aevoric Commonwealth
-          </span>
-        </div>
+          Per Avia, Ad Astra
+        </p>
       </div>
 
-      {/* Bottom Status Bar */}
       <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         display: 'flex',
-        justifyContent: 'space-between',
-        padding: '16px 32px',
-        borderTop: '1px solid rgba(100, 150, 255, 0.1)',
-        background: 'linear-gradient(transparent, rgba(0, 0, 20, 0.6))',
-        pointerEvents: 'none',
-        zIndex: 10,
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '12px',
+        pointerEvents: 'auto',
       }}>
         <span style={{
-          fontSize: '10px',
-          letterSpacing: '2px',
+          fontSize: '11px',
+          letterSpacing: '3px',
           color: 'rgba(255, 255, 255, 0.4)',
           fontFamily: 'monospace',
           textTransform: 'uppercase',
         }}>
-          CUR v1.5.1 — Tier 0: Awakening
-        </span>
-        <span style={{
-          fontSize: '10px',
-          letterSpacing: '2px',
-          color: 'rgba(100, 180, 255, 0.5)',
-          fontFamily: 'monospace',
-        }}>
-          SYS NOMINAL
+          Aevoric Commonwealth
         </span>
       </div>
     </div>
-  );
+
+    {/* Bottom Status Bar */}
+    <div style={{
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      display: 'flex',
+      justifyContent: 'space-between',
+      padding: '16px 32px',
+      borderTop: '1px solid rgba(100, 150, 255, 0.1)',
+      background: 'linear-gradient(transparent, rgba(0, 0, 20, 0.6))',
+      pointerEvents: 'none',
+      zIndex: 10,
+    }}>
+      <span style={{
+        fontSize: '10px',
+        letterSpacing: '2px',
+        color: 'rgba(255, 255, 255, 0.4)',
+        fontFamily: 'monospace',
+        textTransform: 'uppercase',
+      }}>
+        CUR v1.5.1 — Tier 0: Awakening
+      </span>
+      <span style={{
+        fontSize: '10px',
+        letterSpacing: '2px',
+        color: 'rgba(100, 180, 255, 0.5)',
+        fontFamily: 'monospace',
+      }}>
+        SYS NOMINAL
+      </span>
+    </div>
+  </div>
+);
 }
