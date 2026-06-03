@@ -11,7 +11,7 @@ const AevoriaSceneWrapper = dynamic(() => import('./aevoria-scene-wrapper'), {
 export default function HomePage() {
   return (
     <main style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      <Suspense fallback={null}>
+      <Suspense fallback={<div style={{ color: 'white', padding: '20px' }}>Loading 3D Scene...</div>}>
         <AevoriaSceneWrapper />
       </Suspense>
     </main>
