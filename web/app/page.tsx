@@ -1,6 +1,12 @@
+"use client";
+
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
-import AevoriaSceneWrapper from './aevoria-scene-wrapper';
+import dynamic from 'next/dynamic'
+
+// 2. Dynamically import the wrapper with SSR disabled
+const AevoriaSceneWrapper = dynamic(() => import('./aevoria-scene-wrapper'), { 
+  ssr: false 
+})
 
 export default function HomePage() {
   return (
