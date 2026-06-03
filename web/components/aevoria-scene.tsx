@@ -210,7 +210,7 @@ export default function AevoriaScene() {
           fontFamily: 'monospace',
           textTransform: 'uppercase',
         }}>
-          CUR v1.5.1 — Tier 0: Awakening
+          CUR v1.0.1 — Tier 0: Awakening
         </span>
         <span style={{
           fontSize: '10px',
