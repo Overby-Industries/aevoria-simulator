@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react'; // Removed useState
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export default function AevoriaScene() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current || initialized) return;
+    if (!containerRef.current) return;
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -97,8 +96,9 @@ export default function AevoriaScene() {
     controls.update();
 
     // Animation loop
+    let animationFrameId: number;
     function animate() {
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       ring.rotation.y += 0.002;
       station.rotation.y -= 0.001;
       stars.rotation.y += 0.0001;
@@ -115,112 +115,112 @@ export default function AevoriaScene() {
     }
     window.addEventListener('resize', onResize);
 
-    setInitialized(true);
-
+    // CLEANUP FUNCTION - Runs only when component unmounts
     return () => {
       window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(animationFrameId); // Stop the render loop
       renderer.dispose();
       if (containerRef.current) {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [containerRef, initialized]);
+  }, []); // <-- EMPTY DEPENDENCY ARRAY: Run once on mount, clean up on unmount
 
   return (
-  <div ref={containerRef} style={{ width: '100%', height: '100vh', position: 'relative' }}>
-    {/* Nav Overlay */}
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      padding: '24px 32px',
-      pointerEvents: 'none',
-      zIndex: 10,
-    }}>
+    <div ref={containerRef} style={{ width: '100%', height: '100vh', position: 'relative' }}>
+      {/* Nav Overlay */}
       <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
         display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        padding: '24px 32px',
+        pointerEvents: 'none',
+        zIndex: 10,
       }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: '28px',
-          fontWeight: 300,
-          letterSpacing: '6px',
-          color: '#ffffff',
-          textShadow: '0 0 20px rgba(100, 150, 255, 0.5)',
-          fontFamily: "'Segoe UI', system-ui, sans-serif",
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
         }}>
-          AEVORIA
-        </h1>
-        <p style={{
-          margin: 0,
-          fontSize: '13px',
-          fontWeight: 300,
-          letterSpacing: '4px',
-          color: 'rgba(180, 200, 255, 0.7)',
-          fontFamily: "'Segoe UI', system-ui, sans-serif",
-          fontStyle: 'italic',
+          <h1 style={{
+            margin: 0,
+            fontSize: '28px',
+            fontWeight: 300,
+            letterSpacing: '6px',
+            color: '#ffffff',
+            textShadow: '0 0 20px rgba(100, 150, 255, 0.5)',
+            fontFamily: "'Segoe UI', system-ui, sans-serif",
+          }}>
+            AEVORIA
+          </h1>
+          <p style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 300,
+            letterSpacing: '4px',
+            color: 'rgba(180, 200, 255, 0.7)',
+            fontFamily: "'Segoe UI', system-ui, sans-serif",
+            fontStyle: 'italic',
+          }}>
+            Per Avia, Ad Astra
+          </p>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '12px',
+          pointerEvents: 'auto',
         }}>
-          Per Avia, Ad Astra
-        </p>
+          <span style={{
+            fontSize: '11px',
+            letterSpacing: '3px',
+            color: 'rgba(255, 255, 255, 0.4)',
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+          }}>
+            Aevoric Commonwealth
+          </span>
+        </div>
       </div>
 
+      {/* Bottom Status Bar */}
       <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        gap: '12px',
-        pointerEvents: 'auto',
+        justifyContent: 'space-between',
+        padding: '16px 32px',
+        borderTop: '1px solid rgba(100, 150, 255, 0.1)',
+        background: 'linear-gradient(transparent, rgba(0, 0, 20, 0.6))',
+        pointerEvents: 'none',
+        zIndex: 10,
       }}>
         <span style={{
-          fontSize: '11px',
-          letterSpacing: '3px',
+          fontSize: '10px',
+          letterSpacing: '2px',
           color: 'rgba(255, 255, 255, 0.4)',
           fontFamily: 'monospace',
           textTransform: 'uppercase',
         }}>
-          Aevoric Commonwealth
+          CUR v1.5.1 — Tier 0: Awakening
+        </span>
+        <span style={{
+          fontSize: '10px',
+          letterSpacing: '2px',
+          color: 'rgba(100, 180, 255, 0.5)',
+          fontFamily: 'monospace',
+        }}>
+          SYS NOMINAL
         </span>
       </div>
     </div>
-
-    {/* Bottom Status Bar */}
-    <div style={{
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      display: 'flex',
-      justifyContent: 'space-between',
-      padding: '16px 32px',
-      borderTop: '1px solid rgba(100, 150, 255, 0.1)',
-      background: 'linear-gradient(transparent, rgba(0, 0, 20, 0.6))',
-      pointerEvents: 'none',
-      zIndex: 10,
-    }}>
-      <span style={{
-        fontSize: '10px',
-        letterSpacing: '2px',
-        color: 'rgba(255, 255, 255, 0.4)',
-        fontFamily: 'monospace',
-        textTransform: 'uppercase',
-      }}>
-        CUR v1.5.1 — Tier 0: Awakening
-      </span>
-      <span style={{
-        fontSize: '10px',
-        letterSpacing: '2px',
-        color: 'rgba(100, 180, 255, 0.5)',
-        fontFamily: 'monospace',
-      }}>
-        SYS NOMINAL
-      </span>
-    </div>
-  </div>
-);
+  );
 }
