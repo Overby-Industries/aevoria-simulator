@@ -1,19 +1,18 @@
 #include "register_types.h"
 #include "direct_democracy_os.h"
 #include "resource_commons.h"
+#include "regulatory_engine.hpp"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
 
-
-
 using namespace godot;
 
 void initialize_aevoria_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) return;
-
+    ClassDB::register_class<RegulatoryEngine>();
     ClassDB::register_class<DirectDemocracyOS>();
     ClassDB::register_class<ResourceCommons>();
 }
