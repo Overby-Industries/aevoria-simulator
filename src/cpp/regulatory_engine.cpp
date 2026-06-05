@@ -1,4 +1,6 @@
 #include "regulatory_engine.hpp"
+#include <gdextension_interface.h>
+#include <godot.hpp>
 
 using namespace godot;
 

@@ -1,0 +1,13 @@
+{
+  "godot_version": "4.0",
+  "libraries": [
+    {
+      "name": "aevoria_simulator",
+      "path": "bin/aevoria_simulator",
+      "symbol_prefix": "aevoria_",
+      "config": {
+        "entry_symbol": "aevoria_simulator_init"
+      }
+    }
+  ]
+}
