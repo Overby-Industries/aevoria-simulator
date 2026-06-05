@@ -1,8 +1,6 @@
 #ifndef REGULATORY_ENGINE_HPP
 #define REGULATORY_ENGINE_HPP
 
-#include <gdextension_interface.h>
-#include <godot.hpp>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/templates/vector.hpp>

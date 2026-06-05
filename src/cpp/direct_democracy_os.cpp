@@ -1,6 +1,5 @@
 #include "direct_democracy_os.h"
-#include <gdextension_interface.h>
-#include <godot.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
 using namespace godot;
 
@@ -12,13 +11,8 @@ void DirectDemocracyOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_archived_proposals"), &DirectDemocracyOS::get_archived_proposals);
 }
 
-DirectDemocracyOS::DirectDemocracyOS() {
-    // Constructor
-}
-
-DirectDemocracyOS::~DirectDemocracyOS() {
-    // Destructor
-}
+DirectDemocracyOS::DirectDemocracyOS() {}
+DirectDemocracyOS::~DirectDemocracyOS() {}
 
 void DirectDemocracyOS::submit_proposal(const String& title, const String& description, const String& authorUID) {
     Proposal newProposal;
@@ -50,12 +44,19 @@ void DirectDemocracyOS::vote_on_proposal(const String& proposalTitle, const Stri
 
 void DirectDemocracyOS::check_and_pass_proposals() {
     for (auto it = activeProposals.begin(); it != activeProposals.end(); ) {
+
         if (it->upvotes > it->downvotes && it->upvotes >= 100) {
+
+            String passed_title = it->title; // FIXED
+
             it->isPassed = true;
             archivedProposals.push_back(*it);
-            it = activeProposals.erase(it);
-            UtilityFunctions::print("Proposal passed: ", it->title);
-        } else {
+
+            it = activeProposals.erase(it); // erase returns next iterator
+
+            UtilityFunctions::print("Proposal passed: ", passed_title);
+        } 
+        else {
             ++it;
         }
     }
