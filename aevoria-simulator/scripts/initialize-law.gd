@@ -1,34 +1,22 @@
 extends Node
 
-var reg_engine = RegulatoryEngine.new()
+@onready var corruption_detector: CorruptionDetector = $CorruptionDetector
 
 func _ready():
-    # 1. Initialize the CUR (The Law)
-    # CUR-S.4.1: Silicon entities must be Tier 2 to perform decommissioning.
-    reg_engine.add_law(LawDomain.SILICON, "CUR-S.4.1", "Graceful Decommissioning Tier Requirement", 2, false)
-    
-    # CUR-H.2.5: Human interaction requires consent.
-    reg_engine.add_law(LawDomain.HUMAN, "CUR-H.2.5", "Mandatory Consent", 0, true)
+    print("Detector: ", corruption_detector)
+    print("Methods: ", corruption_detector.get_method_list())
 
-    # 2. Test an ILLEGAL action (A Tier 1 Silicon entity trying to decommission)
-    var illegal_action = PlayerAction.new()
-    illegal_action.actor_domain = LawDomain.SILICON
-    illegal_action.actor_tier = 1 # Too low!
-    illegal_action.action_type = "decommission"
-    
-    var error_msg = ""
-    var is_legal = reg_engine.validate_action(illegal_action, error_msg)
-    
-    if not is_legal:
-        print("ALARM: " + error_msg) # Output: ALARM: Violation: CUR-S.4.1 - Actor tier too low.
-    else:
-        print("Action authorized.")
+    # Example: Detect a Sybil attack
+    var is_sybil = corruption_detector.detect_sybil_attack("Player1", "FakeAccount1")
+    if is_sybil:
+        print("Sybil attack detected!")
 
-    # 3. Test a LEGAL action
-    var legal_action = PlayerAction.new()
-    legal_action.actor_domain = LawDomain.HUMAN
-    legal_action.actor_tier = 0
-    legal_action.has_consent = true
+    # Example: Detect bribery
+    var is_bribe = corruption_detector.detect_bribery("Player1", "Player2", 1000)
+    if is_bribe:
+        print("Bribery detected!")
+
+    # Example: Get flagged accounts
+    var flagged = corruption_detector.get_flagged_accounts()
+    print("Flagged Accounts: ", flagged)
     
-    if reg_engine.validate_action(legal_action, error_msg):
-        print("Human action authorized.")
