@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 export const metadata = {
   title: 'Aevoria Simulator',
@@ -14,6 +15,7 @@ export default function RootLayout({
     <html lang="en">
       <body style={{ margin: 0, padding: 0, overflow: 'hidden', background: '#000' }}>
         <Analytics/>
+        <SpeedInsights/>
         {children}
       </body>
     </html>

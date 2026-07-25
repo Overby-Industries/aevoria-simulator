@@ -27,7 +27,7 @@ Welcome to **Aevoria**, the ultimate adversarial sandbox for the **[Code of Univ
 | National Colors | Midnight Blue, Sunrise Gold, Cloud White |
 | Emblem | The Ascending Arc |
 
-![Aevoria](aevoria.png)
+![Aevoria](public/aevoria.png)
 
 Aevoria is not just a space mining game; it is a high-fidelity governance simulator. You will command an SSTO (Single-Stage-To-Orbit) asteroid mining heavy-lift fleet, deploy ethical AI miner swarms, and build a zero-waste interplanetary civilization. But the vacuum of space isn't your biggest threat. 
 
