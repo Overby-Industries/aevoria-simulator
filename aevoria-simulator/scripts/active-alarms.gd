@@ -1,3 +1,5 @@
+extends Node
+
 @onready var alarm_system: AlarmSystem = $AlarmSystem
 
 func _process(delta):

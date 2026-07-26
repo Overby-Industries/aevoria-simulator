@@ -43,21 +43,23 @@ void DirectDemocracyOS::vote_on_proposal(const String& proposalTitle, const Stri
 }
 
 void DirectDemocracyOS::check_and_pass_proposals() {
-    for (auto it = activeProposals.begin(); it != activeProposals.end(); ) {
+    // godot::Vector has no iterator-based erase() (only erase-by-value and
+    // remove_at(index)), so this walks by index instead of iterator.
+    for (int i = 0; i < activeProposals.size(); ) {
+        Proposal &proposal = activeProposals.write[i];
 
-        if (it->upvotes > it->downvotes && it->upvotes >= 100) {
+        if (proposal.upvotes > proposal.downvotes && proposal.upvotes >= 100) {
+            String passed_title = proposal.title;
 
-            String passed_title = it->title; // FIXED
+            proposal.isPassed = true;
+            archivedProposals.push_back(proposal);
 
-            it->isPassed = true;
-            archivedProposals.push_back(*it);
-
-            it = activeProposals.erase(it); // erase returns next iterator
+            activeProposals.remove_at(i); // shifts later elements down; don't advance i
 
             UtilityFunctions::print("Proposal passed: ", passed_title);
-        } 
+        }
         else {
-            ++it;
+            ++i;
         }
     }
 }

@@ -33,9 +33,11 @@ ResourceCommons::~ResourceCommons() {
  * Use ClassDB::bind_method() to expose C++ methods to GDScript.
  */
 void ResourceCommons::_bind_methods() {
-    // Example:
-    // ClassDB::bind_method(D_METHOD("get_energy_reserve"), &ResourceCommons::get_energy_reserve);
-    // ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "energy_reserve"), "", "get_energy_reserve");
+    ClassDB::bind_method(D_METHOD("request_resource", "resource", "amount", "requesterUID"),
+                         &ResourceCommons::request_resource);
+
+    ClassDB::bind_method(D_METHOD("get_resource_stock", "resource"),
+                         &ResourceCommons::get_resource_stock);
 }
 
 /**
@@ -68,6 +70,28 @@ void ResourceCommons::_process(double delta) {
     // Example future logic:
     // ore_stockpile += extraction_rate * delta;
     // if (ore_stockpile < critical_threshold) emit_signal("resource_low");
+}
+
+/**
+ * @brief Adds a granted resource allocation to the commons pool.
+ *
+ * This currently just credits the pool unconditionally — it does not yet
+ * check against CUR resource rules or scarcity thresholds.
+ */
+void ResourceCommons::request_resource(const String& resource, double amount, const String& requesterUID) {
+    std::string resourceStr = resource.utf8().get_data();
+    resourceStock[resourceStr] += amount;
+
+    UtilityFunctions::print("Resource granted: ", resource, " +", amount, " (requested by ", requesterUID, ")");
+}
+
+/**
+ * @brief Returns the current stock of a resource, or 0 if never added.
+ */
+double ResourceCommons::get_resource_stock(const String& resource) {
+    std::string resourceStr = resource.utf8().get_data();
+    auto it = resourceStock.find(resourceStr);
+    return it != resourceStock.end() ? it->second : 0.0;
 }
 
 } // namespace godot

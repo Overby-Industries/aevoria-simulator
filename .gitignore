@@ -48,8 +48,12 @@ godot/
 *.x86_64
 *.a
 *.o
+*.os
+*.obj
 *.so
 *.dll
 *.lib
+*.exp
+*.pdb
 bin/
 godot-cpp/bin/

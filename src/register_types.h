@@ -1,6 +1,5 @@
 #pragma once
 
-#include "register_types.h"
 #include "direct_democracy_os.h"
 #include "resource_commons.h"
 
