@@ -278,6 +278,7 @@ export default function AevoriaScene() {
             Aevoric Commonwealth
           </span>
           <nav style={{ display: 'flex', gap: '22px' }}>
+            <NavLink href="/download">Download</NavLink>
             <NavLink href="/store">Store</NavLink>
             <NavLink href="/marketplace">Marketplace</NavLink>
             <NavLink href="/login">Log In</NavLink>

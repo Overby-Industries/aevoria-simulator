@@ -19,6 +19,9 @@ export default async function AppLayout({
           AEVORIA
         </Link>
         <nav style={styles.nav}>
+          <Link href="/download" style={styles.navLink}>
+            Download
+          </Link>
           <Link href="/store" style={styles.navLink}>
             Store
           </Link>
