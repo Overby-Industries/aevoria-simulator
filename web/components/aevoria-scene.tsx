@@ -15,6 +15,51 @@ const navLinkStyle: React.CSSProperties = {
   transition: 'color 0.15s ease',
 };
 
+function RotateIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12a8 8 0 1 1 2.5 5.8" />
+      <path d="M4 12v5h5" />
+    </svg>
+  );
+}
+
+function ScrollIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="7" y="2" width="10" height="16" rx="5" />
+      <line x1="12" y1="6" x2="12" y2="9" />
+    </svg>
+  );
+}
+
+function ControlHint({ icon, label, description }: { icon: React.ReactNode; label: string; description: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+      <div style={{ color: 'rgba(150, 180, 255, 0.8)', flexShrink: 0, marginTop: '1px' }}>{icon}</div>
+      <div>
+        <div style={{
+          fontSize: '11px',
+          letterSpacing: '2px',
+          color: 'rgba(255, 255, 255, 0.85)',
+          fontFamily: 'monospace',
+          textTransform: 'uppercase',
+        }}>
+          {label}
+        </div>
+        <div style={{
+          fontSize: '11px',
+          color: 'rgba(200, 210, 230, 0.55)',
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          marginTop: '2px',
+        }}>
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -113,10 +158,23 @@ export default function AevoriaScene() {
     const stars = new THREE.Points(starsGeometry, starsMaterial);
     scene.add(stars);
 
-    // Controls
+    // Controls — deliberately just rotate + zoom for a showcase scene.
+    // Panning is off entirely (not just remapped) so there's no leftover
+    // right-button drag behavior once the context-menu fix below frees
+    // right-click up for the browser again.
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: null, // frees right-click for the browser menu
+    };
+    controls.touches = {
+      ONE: THREE.TOUCH.ROTATE,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
     controls.target.set(0, 1, 0);
     controls.update();
 
@@ -124,9 +182,7 @@ export default function AevoriaScene() {
     // event.preventDefault() on 'contextmenu' regardless of the
     // mouseButtons mapping (see three/examples/jsm/controls/OrbitControls.js),
     // which blocks the browser's right-click menu (including "Inspect").
-    // Removing its own listener restores normal right-click; the only
-    // trade-off is right-click no longer pans the camera, which is fine
-    // for a showcase scene like this one.
+    // Removing its own listener restores normal right-click.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     renderer.domElement.removeEventListener('contextmenu', (controls as any)._onContextMenu);
 
@@ -228,6 +284,23 @@ export default function AevoriaScene() {
             <NavLink href="/signup">Sign Up</NavLink>
           </nav>
         </div>
+      </div>
+
+      {/* Controls hint panel */}
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        padding: '20px 24px',
+        pointerEvents: 'none',
+        zIndex: 10,
+      }}>
+        <ControlHint icon={<RotateIcon />} label="Drag" description="Rotate the view" />
+        <ControlHint icon={<ScrollIcon />} label="Scroll" description="Zoom in / out" />
       </div>
 
       {/* Bottom Status Bar */}
