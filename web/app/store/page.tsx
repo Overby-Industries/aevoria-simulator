@@ -1,0 +1,109 @@
+import type Stripe from "stripe";
+import { stripe } from "@/lib/stripe/server";
+import { createCheckoutSession } from "./actions";
+
+export default async function StorePage() {
+  const prices = await stripe.prices.list({
+    active: true,
+    expand: ["data.product"],
+    limit: 50,
+  });
+
+  const items = prices.data
+    .filter((price) => {
+      const product = price.product;
+      // Only ever list first-party store products here — the same
+      // allow-list marker createCheckoutSession enforces, so nothing
+      // shown here can ever be a Tier 2 creator listing.
+      return (
+        typeof product !== "string" &&
+        !product.deleted &&
+        product.active &&
+        product.metadata?.tier === "store"
+      );
+    })
+    .map((price) => {
+      const product = price.product as Stripe.Product;
+      return {
+        priceId: price.id,
+        name: product.name,
+        description: product.description,
+        image: product.images?.[0],
+        amount: price.unit_amount,
+        currency: price.currency,
+      };
+    });
+
+  return (
+    <main style={styles.main}>
+      <h1 style={styles.heading}>Heritage Fleet Store</h1>
+      <div style={styles.grid}>
+        {items.map((item) => (
+          <div key={item.priceId} style={styles.card}>
+            {item.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.image} alt={item.name} style={styles.image} />
+            )}
+            <h2 style={styles.itemName}>{item.name}</h2>
+            {item.description && <p style={styles.desc}>{item.description}</p>}
+            <p style={styles.price}>
+              {item.amount != null
+                ? `$${(item.amount / 100).toFixed(2)} ${item.currency.toUpperCase()}`
+                : "—"}
+            </p>
+            <form action={createCheckoutSession}>
+              <input type="hidden" name="priceId" value={item.priceId} />
+              <button style={styles.button} type="submit">
+                Buy
+              </button>
+            </form>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p style={styles.desc}>No items available yet.</p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  main: {
+    minHeight: "100vh",
+    background: "#0b0d10",
+    color: "#e7e6e1",
+    fontFamily: "system-ui, sans-serif",
+    padding: "48px 24px",
+  },
+  heading: { textAlign: "center", marginBottom: "32px" },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: "20px",
+    maxWidth: "1000px",
+    margin: "0 auto",
+  },
+  card: {
+    background: "#14181f",
+    border: "1px solid #2a2f3a",
+    borderRadius: "12px",
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  image: { width: "100%", borderRadius: "8px", objectFit: "cover" },
+  itemName: { margin: 0, fontSize: "1.1rem" },
+  desc: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
+  price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0" },
+  button: {
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "none",
+    background: "#2e4a73",
+    color: "white",
+    fontSize: "1rem",
+    cursor: "pointer",
+    width: "100%",
+  },
+};
