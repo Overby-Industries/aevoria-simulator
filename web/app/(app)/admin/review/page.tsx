@@ -1,18 +1,10 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin";
 import { approveSkin, rejectSkin } from "./actions";
 
-const ADMIN_EMAIL = "founder@overbyindustries.space";
-
 export default async function AdminReviewPage() {
+  await requireAdmin();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.email !== ADMIN_EMAIL) {
-    redirect("/");
-  }
 
   const { data: pending } = await supabase
     .from("skins")
@@ -22,7 +14,12 @@ export default async function AdminReviewPage() {
 
   return (
     <main style={styles.main}>
-      <h1 style={styles.heading}>Pending review</h1>
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", maxWidth: "600px", margin: "0 auto 32px" }}>
+        <h1 style={{ ...styles.heading, marginBottom: 0 }}>Pending review</h1>
+        <a href="/admin/flags" style={{ fontSize: "0.85rem", color: "#8db0e0" }}>
+          Integrity flags →
+        </a>
+      </div>
       <div style={styles.list}>
         {(pending ?? []).map((skin) => (
           <div key={skin.id} style={styles.card}>

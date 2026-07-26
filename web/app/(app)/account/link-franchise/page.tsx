@@ -1,31 +1,61 @@
-import { signup } from "@/app/auth/actions";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { FactionSelector } from "@/components/FactionSelector";
+import { createFranchiseAccount } from "./actions";
 
-export default async function SignupPage({
+export default async function LinkFranchisePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; check_email?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const params = await searchParams;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (params.check_email) {
-    return (
-      <main style={styles.main}>
-        <div style={styles.card}>
-          <h1 style={styles.heading}>Check your email</h1>
-          <p style={styles.text}>
-            We sent you a confirmation link. Click it to activate your
-            Aevoric Commonwealth account.
-          </p>
-        </div>
-      </main>
+  if (!user) {
+    redirect("/login?next=/account/link-franchise");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("faction, linked_primary_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.faction) {
+    redirect("/account?error=" + encodeURIComponent("Choose your own faction first."));
+  }
+  if (profile.linked_primary_id) {
+    redirect(
+      "/account?error=" +
+        encodeURIComponent("An Independent Franchise account can't itself create another.")
+    );
+  }
+
+  const { data: existingAlt } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("linked_primary_id", user.id)
+    .maybeSingle();
+
+  if (existingAlt) {
+    redirect(
+      "/account?error=" + encodeURIComponent("You already have an Independent Franchise account.")
     );
   }
 
   return (
     <main style={styles.main}>
-      <form action={signup} style={styles.card}>
-        <h1 style={styles.heading}>Create an account</h1>
+      <form action={createFranchiseAccount} style={styles.card}>
+        <h1 style={styles.heading}>Register an Independent Franchise</h1>
+        <p style={styles.text}>
+          Your Primary account is aligned with{" "}
+          <strong style={{ color: "#e7e6e1" }}>{profile.faction}</strong>. Per the
+          Dual-Entity Protocol, your Franchise must choose one of the two
+          remaining factions.
+        </p>
         {params.error && <p style={styles.error}>{params.error}</p>}
 
         <label style={styles.label}>
@@ -49,15 +79,11 @@ export default async function SignupPage({
           />
         </label>
 
-        <FactionSelector />
+        <FactionSelector excludeFaction={profile.faction} />
 
         <button style={styles.button} type="submit">
-          Sign up
+          Create Franchise account
         </button>
-
-        <p style={styles.text}>
-          Already have an account? <a href="/login">Log in</a>
-        </p>
       </form>
     </main>
   );
@@ -105,6 +131,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "1rem",
     cursor: "pointer",
   },
-  text: { fontSize: "0.85rem", color: "#9aa2b0" },
+  text: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
   error: { color: "#e2786b", fontSize: "0.85rem", margin: 0 },
 };
