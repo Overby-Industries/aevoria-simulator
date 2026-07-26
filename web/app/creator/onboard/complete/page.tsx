@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,7 +25,7 @@ export default async function CreatorOnboardCompletePage() {
     // Stripe is the source of truth for onboarding status — we re-check
     // directly rather than trusting that landing on this page means
     // onboarding actually finished (a user can navigate here manually).
-    const account = await stripe.accounts.retrieve(
+    const account = await getStripe().accounts.retrieve(
       profile.stripe_connect_account_id
     );
     chargesEnabled = account.charges_enabled;

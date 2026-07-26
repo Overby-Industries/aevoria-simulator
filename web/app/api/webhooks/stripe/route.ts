@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       rawBody,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -75,7 +75,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     // Read the actual application fee off the PaymentIntent rather than
     // recomputing it — this is what Stripe actually charged, the
     // authoritative source rather than our own remembered intent.
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
     const platformFeeCents = paymentIntent.application_fee_amount ?? 0;
 
     purchaseRow = {

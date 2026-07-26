@@ -1,4 +1,4 @@
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 
 // Same principle as /store/success: this page only displays status by
 // re-checking with Stripe. The webhook is the only thing that actually
@@ -14,7 +14,7 @@ export default async function MarketplaceSuccessPage({
 
   if (session_id) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(session_id);
+      const session = await getStripe().checkout.sessions.retrieve(session_id);
       status = session.payment_status === "paid" ? "paid" : "pending";
     } catch {
       status = "unknown";

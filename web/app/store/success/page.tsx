@@ -1,4 +1,4 @@
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 
 // This page ONLY displays a friendly confirmation — it never grants a
 // purchase itself. A visit here is an unauthenticated GET request that
@@ -17,7 +17,7 @@ export default async function StoreSuccessPage({
 
   if (session_id) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(session_id);
+      const session = await getStripe().checkout.sessions.retrieve(session_id);
       status = session.payment_status === "paid" ? "paid" : "pending";
     } catch {
       status = "unknown";

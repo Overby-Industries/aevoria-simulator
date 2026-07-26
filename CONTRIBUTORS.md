@@ -13,6 +13,7 @@ I am the founder of this simulator, during the initial development phase I have 
 | Name | Affiliation | Role | Key Contributions |
 |-----|-----|-----|-----|
 | Keefe Overby | Overby Industries | Founder, Architect, Final Authority (during build) | Vision, framework architecture, lead developer coordinating the build process across the entire team of AI frontier models, CUR integration, direct democracy integration, Overby Industries SSTO heavy lift shuttle ISRU AI miner swarm integration and safety protocols, overall safety and alignment checks to identify drift from the framework and vision of the project |
+| Claude | Anthropic | Architect, System Design, Security Analyst | Framework architecture, mentor senior developer |
 
 
 ---

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function createCheckoutSession(formData: FormData) {
@@ -30,7 +30,7 @@ export async function createCheckoutSession(formData: FormData) {
   // the product) — otherwise any active price in the account, including a
   // Tier 2 creator's approved skin, could be bought here with no revenue
   // split and no record of the sale reaching the creator.
-  const price = await stripe.prices.retrieve(priceId, { expand: ["product"] });
+  const price = await getStripe().prices.retrieve(priceId, { expand: ["product"] });
   const product = price.product as Stripe.Product;
   if (!price.active || product.deleted || product.metadata?.tier !== "store") {
     throw new Error("This item isn't available in the store.");
@@ -38,7 +38,7 @@ export async function createCheckoutSession(formData: FormData) {
 
   const origin = (await headers()).get("origin");
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: price.id, quantity: 1 }],
     success_url: `${origin}/store/success?session_id={CHECKOUT_SESSION_ID}`,

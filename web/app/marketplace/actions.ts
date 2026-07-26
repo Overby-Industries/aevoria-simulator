@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
 // Creators keep 85% of gross (per MONETIZATION_STRATEGY.md); Stripe's own
@@ -53,12 +53,12 @@ export async function createSkinCheckoutSession(formData: FormData) {
   // editable while a listing is pending review), and the buyer is always
   // charged whatever this Price says regardless of the DB column, so the
   // fee must be derived from the same source of truth.
-  const stripePrice = await stripe.prices.retrieve(skin.stripe_price_id);
+  const stripePrice = await getStripe().prices.retrieve(skin.stripe_price_id);
   const actualAmountCents = stripePrice.unit_amount ?? 0;
   const applicationFeeCents = Math.round(actualAmountCents * PLATFORM_FEE_RATE);
   const origin = (await headers()).get("origin");
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: skin.stripe_price_id, quantity: 1 }],
     payment_intent_data: {

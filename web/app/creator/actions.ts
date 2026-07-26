@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -25,7 +25,7 @@ export async function startCreatorOnboarding() {
   let accountId = profile?.stripe_connect_account_id;
 
   if (!accountId) {
-    const account = await stripe.accounts.create({
+    const account = await getStripe().accounts.create({
       type: "express",
       email: user.email,
       metadata: { supabase_user_id: user.id },
@@ -45,7 +45,7 @@ export async function startCreatorOnboarding() {
 
   const origin = (await headers()).get("origin");
 
-  const accountLink = await stripe.accountLinks.create({
+  const accountLink = await getStripe().accountLinks.create({
     account: accountId,
     refresh_url: `${origin}/creator/onboard`,
     return_url: `${origin}/creator/onboard/complete`,

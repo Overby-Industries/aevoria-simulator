@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -45,13 +45,13 @@ export async function approveSkin(formData: FormData) {
     throw new Error("Skin not found");
   }
 
-  const product = await stripe.products.create({
+  const product = await getStripe().products.create({
     name: skin.title,
     description: skin.description ?? undefined,
     metadata: { skin_id: skin.id, creator_id: skin.creator_id },
   });
 
-  const price = await stripe.prices.create({
+  const price = await getStripe().prices.create({
     product: product.id,
     unit_amount: skin.price_cents,
     currency: "usd",

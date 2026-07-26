@@ -1,9 +1,15 @@
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe/server";
+import { getStripe } from "@/lib/stripe/server";
 import { createCheckoutSession } from "./actions";
 
+// Without this, Next.js has no reason to treat this page as dynamic (no
+// cookies/auth touched here) and will prerender it once at build time —
+// freezing the product list until the next deploy, even if prices or
+// availability change in Stripe.
+export const dynamic = "force-dynamic";
+
 export default async function StorePage() {
-  const prices = await stripe.prices.list({
+  const prices = await getStripe().prices.list({
     active: true,
     expand: ["data.product"],
     limit: 50,
