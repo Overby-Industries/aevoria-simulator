@@ -1,8 +1,33 @@
 'use client';
 
-import { useEffect, useRef } from 'react'; // Removed useState
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+const navLinkStyle: React.CSSProperties = {
+  fontSize: '11px',
+  letterSpacing: '2px',
+  color: 'rgba(220, 230, 255, 0.75)',
+  fontFamily: 'monospace',
+  textTransform: 'uppercase',
+  textDecoration: 'none',
+  transition: 'color 0.15s ease',
+};
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Link
+      href={href}
+      style={{ ...navLinkStyle, color: hovered ? '#ffffff' : navLinkStyle.color }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export default function AevoriaScene() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +120,16 @@ export default function AevoriaScene() {
     controls.target.set(0, 1, 0);
     controls.update();
 
+    // OrbitControls' onContextMenu handler unconditionally calls
+    // event.preventDefault() on 'contextmenu' regardless of the
+    // mouseButtons mapping (see three/examples/jsm/controls/OrbitControls.js),
+    // which blocks the browser's right-click menu (including "Inspect").
+    // Removing its own listener restores normal right-click; the only
+    // trade-off is right-click no longer pans the camera, which is fine
+    // for a showcase scene like this one.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    renderer.domElement.removeEventListener('contextmenu', (controls as any)._onContextMenu);
+
     // Animation loop
     let animationFrameId: number;
     function animate() {
@@ -186,6 +221,12 @@ export default function AevoriaScene() {
           }}>
             Aevoric Commonwealth
           </span>
+          <nav style={{ display: 'flex', gap: '22px' }}>
+            <NavLink href="/store">Store</NavLink>
+            <NavLink href="/marketplace">Marketplace</NavLink>
+            <NavLink href="/login">Log In</NavLink>
+            <NavLink href="/signup">Sign Up</NavLink>
+          </nav>
         </div>
       </div>
 
