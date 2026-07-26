@@ -98,8 +98,26 @@ public:
     // ---------------------------------------------------------------------
 
     /**
-     * @brief Creates
-    */
+     * @brief Logs a new corruption/crisis event and records it against the
+     * corruptor's UID.
+     */
+    void trigger_alarm(const String& alarmType, const String& message,
+                        const String& corruptorUID, const String& targetUID,
+                        const String& resource);
+
+    /**
+     * @brief Marks an active alarm as resolved.
+     */
+    void resolve_alarm(int alarmIndex, const String& solution);
+
+    /**
+     * @brief Returns all currently active (unresolved) alarms.
+     */
+    Array get_active_alarms();
+
+    /**
+     * @brief Returns the corruption history recorded against a given UID.
+     */
     Array get_corruption_record(const String& UID);
 };
 

@@ -2,7 +2,11 @@
 
 #include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+
+#include <string>
+#include <unordered_map>
 
 namespace godot {
 
@@ -29,19 +33,14 @@ private:
     // ---------------------------------------------------------------------
     // Member Variables
     // ---------------------------------------------------------------------
-    // Add your resource-tracking variables here.
-    // Example:
-    //
-    // double ore_stockpile = 0.0;
-    // double energy_reserve = 0.0;
-    // Dictionary extraction_nodes;
-    //
+    // Resource name -> current stock in the shared commons pool.
     // These will eventually integrate with:
     //  - ISRU simulation
     //  - governance decisions
     //  - faction behavior
     //  - crisis protocols
     // ---------------------------------------------------------------------
+    std::unordered_map<std::string, double> resourceStock;
 
 protected:
     /**
@@ -86,6 +85,27 @@ public:
      *  - interacting with governance systems
      */
     void _process(double delta) override;
+
+    // ---------------------------------------------------------------------
+    // Methods exposed to GDScript
+    // ---------------------------------------------------------------------
+
+    /**
+     * @brief Adds a granted resource allocation to the commons pool.
+     *
+     * @param resource The resource type (e.g. "Platinum").
+     * @param amount The amount being added to the pool.
+     * @param requesterUID Who requested it (currently logged only).
+     */
+    void request_resource(const String& resource, double amount, const String& requesterUID);
+
+    /**
+     * @brief Returns the current stock of a resource in the commons pool.
+     *
+     * @param resource The resource type.
+     * @return The current stock, or 0 if the resource has never been added.
+     */
+    double get_resource_stock(const String& resource);
 };
 
 } // namespace godot

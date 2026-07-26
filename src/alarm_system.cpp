@@ -32,6 +32,11 @@ void AlarmSystem::_ready() {
     UtilityFunctions::print("AlarmSystem initialized.");
 }
 
+void AlarmSystem::_process(double delta) {
+    // Placeholder: no auto-resolution/escalation timers yet. Declared as an
+    // override so future work (timeouts, escalation) has somewhere to live.
+}
+
 void AlarmSystem::trigger_alarm(const String& alarmType,
                                 const String& message,
                                 const String& corruptorUID,
