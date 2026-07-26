@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { startCreatorOnboarding } from "@/app/creator/actions";
+import { startCreatorOnboarding } from "../actions";
 
 export default async function CreatorOnboardPage() {
   const supabase = await createClient();
