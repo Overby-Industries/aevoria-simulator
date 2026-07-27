@@ -9,6 +9,12 @@ class_name CURFSMDisplay
 ## is no NodePath auto-resolution here on purpose. Godot readies children
 ## before parents, so a parent-supplied NodePath set in _ready() would still
 ## arrive one frame too late for this node's own _ready() to use it.
+##
+## Themed as "AevoriaPanel" (flat civil slate) rather than the Overby dark
+## console default -- compliance/constitutional state is Commonwealth
+## governance data, not hardware telemetry. See theme_builder.gd.
+
+const ThemeBuilder = preload("res://scripts/theme_builder.gd")
 
 var monitor: CURComplianceMonitor
 var _list_vbox: VBoxContainer
@@ -26,11 +32,11 @@ func set_monitor(p_monitor: CURComplianceMonitor):
 	monitor.capture_risk_updated.connect(_on_capture_risk)
 
 func _build_ui():
+	theme = ThemeBootstrap.theme
 	custom_minimum_size = Vector2(320, 200)
 	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	position = Vector2(20, 20)
-
-	add_child(_make_glass_background(Color(0.05, 0.08, 0.15, 0.45)))
+	theme_type_variation = "AevoriaPanel"
 
 	var outer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 6)
@@ -38,12 +44,15 @@ func _build_ui():
 
 	var header = Label.new()
 	header.text = "COMPLIANCE STATUS"
-	header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	header.add_theme_color_override("font_color", ThemeBuilder.COLOR_TEXT_DARK)
+	header.tooltip_text = "Every entity that touches shared resources runs through the CUR compliance FSM. This panel mirrors its live state -- it never polls, it only reacts to signals."
 	outer.add_child(header)
 
 	_capture_risk_label = Label.new()
 	_capture_risk_label.text = "Capture Risk: —"
 	_capture_risk_label.add_theme_font_size_override("font_size", 12)
+	_capture_risk_label.add_theme_color_override("font_color", ThemeBuilder.COLOR_TEXT_DARK)
+	_capture_risk_label.tooltip_text = "Capture Risk Index: how close this entity's governance influence is to regulatory capture. Low is safe; the band name (e.g. ELEVATED, CRITICAL) is what actually triggers protective measures."
 	outer.add_child(_capture_risk_label)
 
 	outer.add_child(HSeparator.new())
@@ -51,19 +60,6 @@ func _build_ui():
 	_list_vbox = VBoxContainer.new()
 	_list_vbox.add_theme_constant_override("separation", 8)
 	outer.add_child(_list_vbox)
-
-func _make_glass_background(tint: Color) -> ColorRect:
-	var bg = ColorRect.new()
-	bg.color = Color(1, 1, 1, 1)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var shader: Shader = load("res://shaders/frosted_glass_panel.gdshader")
-	var mat = ShaderMaterial.new()
-	mat.shader = shader
-	mat.set_shader_parameter("blur_amount", 2.0)
-	mat.set_shader_parameter("tint_color", tint)
-	bg.material = mat
-	return bg
 
 func _ensure_row(entity_id: String) -> Dictionary:
 	if _entity_rows.has(entity_id):
@@ -73,15 +69,16 @@ func _ensure_row(entity_id: String) -> Dictionary:
 
 	var id_label = Label.new()
 	id_label.text = entity_id
-	id_label.add_theme_color_override("font_color", Color(0.8, 0.85, 0.95))
+	id_label.add_theme_color_override("font_color", ThemeBuilder.COLOR_TEXT_DARK)
 	row.add_child(id_label)
 
 	var compliance_label = Label.new()
+	compliance_label.tooltip_text = "Compliance state: whether this entity's latest reported activity satisfied the rules it's currently bound by. Distinct from the constitutional/governance states shown below it, which track deeper standing."
 	row.add_child(compliance_label)
 
 	var detail_label = Label.new()
 	detail_label.add_theme_font_size_override("font_size", 11)
-	detail_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	detail_label.add_theme_color_override("font_color", Color("5a6470"))
 	row.add_child(detail_label)
 
 	_list_vbox.add_child(row)
@@ -119,11 +116,11 @@ func _refresh_entity(entity_id: String):
 
 func _compliance_color(state: int) -> Color:
 	if state == monitor.KS_COMPLIANT or state == monitor.KS_CERTIFIED:
-		return Color(0.45, 0.9, 0.55)
+		return Color("1f7a3a")
 	elif state == monitor.KS_PENDING_REVIEW:
-		return Color(0.95, 0.85, 0.35)
+		return Color("8a6b06")
 	else:
-		return Color(0.95, 0.4, 0.35)
+		return Color("a1272a")
 
 func _on_transition(entity_id, _axis, _from_state, _to_state, _trigger, _citation):
 	_refresh_entity(entity_id)

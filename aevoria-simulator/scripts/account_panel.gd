@@ -27,6 +27,7 @@ func _ready():
 
 func _build_ui():
 	_panel = PanelContainer.new()
+	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(280, 0)
 	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_panel.position = Vector2(20, 240)

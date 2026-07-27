@@ -26,6 +26,7 @@ var _stats_label: Label
 var _status_label: Label
 var _hull_button: Button
 var _habitat_button: Button
+var _finish_button: Button
 
 func _ready():
 	_catalog = PartCatalog.build_demo_catalog()
@@ -101,6 +102,7 @@ func _build_ui():
 	add_child(canvas)
 
 	var root_panel = PanelContainer.new()
+	root_panel.theme = ThemeBootstrap.theme
 	root_panel.custom_minimum_size = Vector2(300, 560)
 	root_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	root_panel.position = Vector2(20, 20)
@@ -180,6 +182,12 @@ func _build_ui():
 	_status_label.add_theme_color_override("font_color", Color(0.6, 0.9, 0.7))
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	outer.add_child(_status_label)
+
+	_finish_button = Button.new()
+	_finish_button.text = "Finish & Return to Level Select"
+	_finish_button.visible = false
+	_finish_button.pressed.connect(_on_finish_pressed)
+	outer.add_child(_finish_button)
 
 func _make_glass_background(tint: Color) -> ColorRect:
 	var bg = ColorRect.new()
@@ -268,3 +276,9 @@ func _on_save_pressed():
 	file.store_string(_blueprint.to_json())
 	file.close()
 	_status_label.text = "Saved: " + ProjectSettings.globalize_path(path)
+	if LevelContext.current_level_id != "":
+		_finish_button.visible = true
+
+func _on_finish_pressed():
+	LevelContext.finish_current_level({"Platinum": 25.0})
+	get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn")
