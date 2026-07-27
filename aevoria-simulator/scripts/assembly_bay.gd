@@ -27,6 +27,8 @@ var _status_label: Label
 var _hull_button: Button
 var _habitat_button: Button
 var _finish_button: Button
+var _skins_vbox: VBoxContainer
+var _skins_status_label: Label
 
 func _ready():
 	_catalog = PartCatalog.build_demo_catalog()
@@ -36,6 +38,10 @@ func _ready():
 
 	_build_ui()
 	_start_new_blueprint("hull_mk1", "MyShip")
+
+	AevoriaAuth.skins_fetched.connect(_on_skins_fetched)
+	AevoriaAuth.skins_fetch_failed.connect(_on_skins_fetch_failed)
+	_refresh_owned_skins()
 
 # --- blueprint lifecycle -----------------------------------------------------
 
@@ -130,6 +136,31 @@ func _build_ui():
 	_habitat_button.text = "New Habitat"
 	_habitat_button.pressed.connect(func(): _start_new_blueprint("habitat_ring_mk1", "MyHabitat"))
 	new_row.add_child(_habitat_button)
+
+	outer.add_child(HSeparator.new())
+
+	var skins_header = Label.new()
+	skins_header.text = "SKIN (from your Commonwealth account)"
+	skins_header.add_theme_font_size_override("font_size", 12)
+	outer.add_child(skins_header)
+
+	_skins_status_label = Label.new()
+	_skins_status_label.add_theme_font_size_override("font_size", 11)
+	_skins_status_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	_skins_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	outer.add_child(_skins_status_label)
+
+	var skins_scroll = ScrollContainer.new()
+	skins_scroll.custom_minimum_size = Vector2(0, 60)
+	outer.add_child(skins_scroll)
+	_skins_vbox = VBoxContainer.new()
+	_skins_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	skins_scroll.add_child(_skins_vbox)
+
+	var random_skin_button = Button.new()
+	random_skin_button.text = "Random Skin"
+	random_skin_button.pressed.connect(_on_random_skin_pressed)
+	outer.add_child(random_skin_button)
 
 	outer.add_child(HSeparator.new())
 
@@ -246,6 +277,61 @@ func _refresh_stats_ui():
 	if keys.is_empty():
 		lines.append("  (none yet)")
 	_stats_label.text = "\n".join(lines)
+
+# --- owned skins (Commonwealth account) -----------------------------------------
+
+func _refresh_owned_skins():
+	for child in _skins_vbox.get_children():
+		child.queue_free()
+
+	if not AevoriaAuth.is_logged_in():
+		_skins_status_label.text = "Log in from the Level Select screen to use a purchased skin here."
+		return
+
+	_skins_status_label.text = "Loading your skins..."
+	AevoriaAuth.fetch_owned_skins()
+
+func _on_skins_fetched(purchases: Array):
+	for child in _skins_vbox.get_children():
+		child.queue_free()
+
+	if purchases.is_empty():
+		_skins_status_label.text = "No purchased skins yet -- using a random skin."
+		return
+
+	_skins_status_label.text = "Pick one of your purchased skins:"
+	for purchase in purchases:
+		var skin = purchase.get("skins", {})
+		var recipe = skin.get("recipe")
+		if typeof(recipe) != TYPE_DICTIONARY:
+			continue
+		var button = Button.new()
+		button.text = skin.get("title", "(untitled)")
+		button.pressed.connect(func(): _apply_owned_skin(recipe))
+		_skins_vbox.add_child(button)
+
+func _on_skins_fetch_failed(message: String):
+	_skins_status_label.text = message
+
+func _apply_owned_skin(web_recipe: Dictionary):
+	# web/lib/skin-recipe.ts uses camelCase hex-string colors; AssemblyBlueprint's
+	# skin_recipe uses snake_case (see part_assembler.cpp's hex_to_color) --
+	# converting here is the one place those two conventions meet.
+	_blueprint.skin_recipe = {
+		"seed": web_recipe.get("seed", 0),
+		"frequency": web_recipe.get("frequency", 0.08),
+		"dark_color": web_recipe.get("darkColor", "#26201a"),
+		"base_color": web_recipe.get("baseColor", "#8a8f96"),
+		"highlight_color": web_recipe.get("highlightColor", "#c7ccd1"),
+	}
+	_rebuild_preview()
+
+func _on_random_skin_pressed():
+	_blueprint.skin_recipe = {
+		"seed": randi() % 100000, "frequency": 0.08,
+		"dark_color": "#26201a", "base_color": "#8a8f96", "highlight_color": "#c7ccd1",
+	}
+	_rebuild_preview()
 
 # --- interaction handlers ------------------------------------------------------
 
