@@ -8,6 +8,7 @@ extends Node
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var resource_commons: ResourceCommons = $ResourceCommons
+@onready var camera: Camera3D = $Camera3D
 
 func _ready():
 	var catalog := _build_catalog()
@@ -22,6 +23,12 @@ func _ready():
 	habitat.position = Vector3(3, 0, 0)
 	add_child(habitat)
 	print("[PartsDemo] Assembled habitat '", habitat.name, "' with ", habitat.get_child_count(), " attached parts.")
+
+	# Frame both assembled objects regardless of the camera's starting
+	# transform in the .tscn -- guarantees they're actually on-screen
+	# instead of relying on hand-picked numbers being exactly right.
+	camera.make_current()
+	camera.look_at((ship.position + habitat.position) * 0.5, Vector3.UP)
 
 func _build_catalog() -> Array:
 	var hull := PartDefinition.new()
