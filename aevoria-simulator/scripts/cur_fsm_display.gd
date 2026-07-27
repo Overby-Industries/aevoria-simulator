@@ -103,13 +103,17 @@ func _refresh_entity(entity_id: String):
 	var governance = monitor.get_governance_state(handle)
 	var in_protected = monitor.in_protected_mode(handle)
 
-	entry.compliance.text = "Compliance: %s" % monitor.compliance_state_name(compliance)
+	# .capitalize() is display-only cosmetics (SCREAMING_SNAKE_CASE -> Title
+	# Case) -- the underlying name still comes from libcur's own
+	# cur::to_string(), so there's still exactly one source of truth for
+	# what these states are actually called.
+	entry.compliance.text = "Compliance: %s" % monitor.compliance_state_name(compliance).capitalize()
 	entry.compliance.add_theme_color_override("font_color", _compliance_color(compliance))
 
 	var protected_suffix = "  [PROTECTED MODE]" if in_protected else ""
 	entry.detail.text = "%s | %s%s" % [
-		monitor.constitutional_state_name(constitutional),
-		monitor.governance_state_name(governance),
+		monitor.constitutional_state_name(constitutional).capitalize(),
+		monitor.governance_state_name(governance).capitalize(),
 		protected_suffix,
 	]
 

@@ -40,6 +40,10 @@ func _build_ui():
 
 	var scroll = ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 170)
+	# Scroll vertically only -- horizontal scroll disabled forces row labels
+	# to respect the panel's width instead of overflowing past it, which is
+	# what makes autowrap on each row actually wrap instead of just clipping.
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)
 
 	_list_vbox = VBoxContainer.new()
@@ -75,6 +79,8 @@ func _on_violation_detected(entity_id: String, violation_id: String, citation: S
 	row.text = "[%s] %s — %s" % [violation_id, entity_id, citation]
 	row.add_theme_color_override("font_color", Color(1.0, 0.7, 0.65))
 	row.add_theme_font_size_override("font_size", 12)
+	row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list_vbox.add_child(row)
 	_list_vbox.move_child(row, 0)
 
