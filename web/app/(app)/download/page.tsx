@@ -15,6 +15,11 @@ export default function DownloadPage() {
         <a href={ITCH_URL} target="_blank" rel="noopener noreferrer" style={styles.ctaButton}>
           Download on itch.io
         </a>
+        <p style={styles.warningNote}>
+          Windows will likely show a &quot;Windows protected your PC&quot; SmartScreen warning —
+          that&apos;s normal for a small, unsigned indie build like this one, not a sign of a
+          problem. Click <strong>More info</strong>, then <strong>Run anyway</strong>.
+        </p>
         <div style={styles.divider} />
         <p style={styles.text}>
           Playing under your Commonwealth citizenship — creator marketplace purchases, faction
@@ -71,6 +76,13 @@ const styles: Record<string, React.CSSProperties> = {
     height: "1px",
     background: "#2a2f3a",
     margin: "24px 0",
+  },
+  warningNote: {
+    fontSize: "0.8rem",
+    lineHeight: 1.5,
+    color: "#8a8f9c",
+    margin: "14px 0 0",
+    textAlign: "left",
   },
   ctaButton: {
     display: "inline-block",
