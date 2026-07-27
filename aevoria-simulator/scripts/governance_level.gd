@@ -15,6 +15,7 @@ var _steps: Array = []
 var _tutorial_label: Label
 var _next_button: Button
 var _finish_button: Button
+var _back_button: Button
 
 func _ready():
 	hud.set_monitor(monitor)
@@ -49,9 +50,13 @@ func _build_tutorial_ui() -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "AevoriaPanel"
-	panel.custom_minimum_size = Vector2(360, 0)
+	# Below the CUR HUD panels (which occupy roughly x=20..740, y=20..240),
+	# not to their right -- a fixed x=760 previously ran past the default
+	# window width and got clipped. This stays within the default 1152px
+	# window regardless.
+	panel.custom_minimum_size = Vector2(700, 0)
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	panel.position = Vector2(760, 20)
+	panel.position = Vector2(20, 280)
 	canvas.add_child(panel)
 
 	var outer = VBoxContainer.new()
@@ -83,6 +88,12 @@ func _build_tutorial_ui() -> void:
 	_finish_button.visible = false
 	_finish_button.pressed.connect(_on_finish_pressed)
 	row.add_child(_finish_button)
+
+	_back_button = Button.new()
+	_back_button.text = "Back to Level Select"
+	_back_button.theme_type_variation = "AevoriaButton"
+	_back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
+	row.add_child(_back_button)
 
 func _show_step(index: int) -> void:
 	_step = index

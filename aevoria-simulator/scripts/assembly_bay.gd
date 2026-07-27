@@ -29,6 +29,7 @@ var _habitat_button: Button
 var _finish_button: Button
 var _skins_vbox: VBoxContainer
 var _skins_status_label: Label
+var _back_button: Button
 
 func _ready():
 	_catalog = PartCatalog.build_demo_catalog()
@@ -109,7 +110,7 @@ func _build_ui():
 
 	var root_panel = PanelContainer.new()
 	root_panel.theme = ThemeBootstrap.theme
-	root_panel.custom_minimum_size = Vector2(300, 560)
+	root_panel.custom_minimum_size = Vector2(300, 0)
 	root_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	root_panel.position = Vector2(20, 20)
 	canvas.add_child(root_panel)
@@ -117,9 +118,20 @@ func _build_ui():
 	var bg = _make_glass_background(Color(0.05, 0.08, 0.15, 0.45))
 	root_panel.add_child(bg)
 
+	# The full control list (skins, sockets, parts, stats, actions) is taller
+	# than a lot of real window sizes -- without a height cap here, Save /
+	# Finish / Back end up positioned entirely off-screen with no way to
+	# reach them, since a PanelContainer floating under a CanvasLayer has no
+	# size limit of its own and just grows to fit its content.
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(300, 560)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root_panel.add_child(scroll)
+
 	var outer = VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_theme_constant_override("separation", 8)
-	root_panel.add_child(outer)
+	scroll.add_child(outer)
 
 	var header = Label.new()
 	header.text = "ASSEMBLY BAY"
@@ -219,6 +231,11 @@ func _build_ui():
 	_finish_button.visible = false
 	_finish_button.pressed.connect(_on_finish_pressed)
 	outer.add_child(_finish_button)
+
+	_back_button = Button.new()
+	_back_button.text = "Back to Level Select"
+	_back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
+	outer.add_child(_back_button)
 
 func _make_glass_background(tint: Color) -> ColorRect:
 	var bg = ColorRect.new()
