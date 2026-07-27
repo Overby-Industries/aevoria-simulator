@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/AevoriaManager.gd" id="1_manager"]
 [ext_resource type="Script" path="res://scripts/active-alarms.gd" id="2_activealarms"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/trigger-alarm.gd" id="10_triggeralarm"]
 [ext_resource type="Script" path="res://scripts/cur-demo.gd" id="11_curdemo"]
 [ext_resource type="PackedScene" path="res://scenes/CurHud.tscn" id="12_curhud"]
+[ext_resource type="Script" path="res://scripts/parts-demo.gd" id="13_partsdemo"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_manager")
@@ -81,3 +82,10 @@ script = ExtResource("11_curdemo")
 [node name="CURComplianceMonitor" type="CURComplianceMonitor" parent="Demos/CurDemo"]
 
 [node name="CurHud" parent="Demos/CurDemo" instance=ExtResource("12_curhud")]
+
+[node name="PartsDemo" type="Node" parent="Demos"]
+script = ExtResource("13_partsdemo")
+
+[node name="PartAssembler" type="PartAssembler" parent="Demos/PartsDemo"]
+
+[node name="ResourceCommons" type="ResourceCommons" parent="Demos/PartsDemo"]

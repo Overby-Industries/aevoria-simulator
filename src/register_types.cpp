@@ -9,6 +9,9 @@
 #include "procedural_art_generator.h"
 #include "cur_godot_bridge.h"
 #include "cur_compliance_monitor.h"
+#include "part_definition.h"
+#include "assembly_blueprint.h"
+#include "part_assembler.h"
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/defs.hpp>
@@ -30,6 +33,9 @@ void initialize_aevoria_module(ModuleInitializationLevel p_level) {
     ClassDB::register_class<ProceduralArtGenerator>();
     ClassDB::register_class<CURGodotBridge>();
     ClassDB::register_class<CURComplianceMonitor>();
+    ClassDB::register_class<PartDefinition>();
+    ClassDB::register_class<AssemblyBlueprint>();
+    ClassDB::register_class<PartAssembler>();
 }
 
 void uninitialize_aevoria_module(ModuleInitializationLevel p_level) {
