@@ -30,4 +30,12 @@ static func build_levels() -> Array:
 			"objective": "Walk a mining charter through the Code of Universal Regulations and see what happens when it breaks its debris limit.",
 			"scene_path": "res://scenes/GovernanceLevel.tscn",
 		},
+		{
+			"id": "prospecting_asteroid_field",
+			"kind": Kind.EXTRACTION,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "Asteroid Field Prospecting",
+			"objective": "Scan the field and mine asteroids for PGMs, comets for H2O -- resources bank straight to the Commonwealth commons.",
+			"scene_path": "res://scenes/AsteroidField.tscn",
+		},
 	]
