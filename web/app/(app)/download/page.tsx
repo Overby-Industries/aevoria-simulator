@@ -1,29 +1,26 @@
 import Link from "next/link";
 
+const ITCH_URL = "https://aevoria-simulator.itch.io/aevoria-simulator-per-avia-ad-astra";
+
 export default function DownloadPage() {
   return (
     <main style={styles.main}>
       <div style={styles.card}>
-        <span style={styles.badge}>Alpha — In Development</span>
+        <span style={styles.badge}>Alpha — Available on itch.io</span>
         <h1 style={styles.heading}>Download Aevoria</h1>
         <p style={styles.text}>
-          The simulator isn&apos;t packaged for public download yet — the governance and
-          compliance backend is still being built and wired into the game engine. There&apos;s
-          nothing playable to hand out yet, so we&apos;d rather tell you that plainly than point
-          you at a broken link.
+          The simulator is early — the governance and compliance backend is still being built
+          out — but there&apos;s a real build you can run. Grab it on itch.io.
         </p>
-        <p style={styles.text}>
-          When a build is ready, it will be distributed through{" "}
-          <span style={styles.itch}>itch.io</span>. This page will turn into a real download
-          button the moment that happens — no separate announcement needed, just check back.
-        </p>
+        <a href={ITCH_URL} target="_blank" rel="noopener noreferrer" style={styles.ctaButton}>
+          Download on itch.io
+        </a>
         <div style={styles.divider} />
         <p style={styles.text}>
-          In the meantime, create your account so you&apos;re ready to go the moment the
-          Commonwealth opens its gates — pick your faction now and your citizenship is waiting
-          for you at launch.
+          Playing under your Commonwealth citizenship — creator marketplace purchases, faction
+          alignment — needs an account here first.
         </p>
-        <Link href="/signup" style={styles.ctaButton}>
+        <Link href="/signup" style={styles.secondaryLink}>
           Create your account
         </Link>
       </div>
@@ -70,7 +67,6 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 0 16px",
     textAlign: "left",
   },
-  itch: { color: "#e7e6e1", fontWeight: 600 },
   divider: {
     height: "1px",
     background: "#2a2f3a",
@@ -84,6 +80,13 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#2e4a73",
     color: "white",
     fontWeight: 600,
+    textDecoration: "none",
+  },
+  secondaryLink: {
+    display: "inline-block",
+    marginTop: "4px",
+    color: "#8db0e0",
+    fontSize: "0.9rem",
     textDecoration: "none",
   },
 };
