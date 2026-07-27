@@ -47,6 +47,7 @@ export async function approveSkin(formData: FormData) {
     .eq("id", skinId);
 
   revalidatePath("/admin/review");
+  revalidatePath("/marketplace");
 }
 
 export async function rejectSkin(formData: FormData) {
@@ -57,4 +58,5 @@ export async function rejectSkin(formData: FormData) {
   await admin.from("skins").update({ status: "rejected" }).eq("id", skinId);
 
   revalidatePath("/admin/review");
+  revalidatePath("/marketplace");
 }

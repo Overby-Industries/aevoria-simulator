@@ -1,16 +1,43 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin";
 import { approveSkin, rejectSkin } from "./actions";
 
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+
 export default async function AdminReviewPage() {
   await requireAdmin();
-  const supabase = await createClient();
+  // RLS on `skins` only lets a row be read by its own creator or once
+  // approved (see 0001_init.sql), and the matching storage.objects read
+  // policy has the same shape -- neither has a carve-out for an admin
+  // reading someone else's still-pending row/file. Use the service-role
+  // client for both the query and the signed URLs, same as
+  // approveSkin/rejectSkin already do; requireAdmin() above is what keeps
+  // this safe, not the DB policy.
+  const admin = createAdminClient();
 
-  const { data: pending } = await supabase
+  const { data: pending } = await admin
     .from("skins")
-    .select("id, title, description, price_cents, storage_path, creator_id, created_at")
+    .select("id, title, description, price_cents, storage_path, preview_image_path, recipe, creator_id, created_at")
     .eq("status", "pending_review")
     .order("created_at", { ascending: true });
+
+  const items = await Promise.all(
+    (pending ?? []).map(async (skin) => {
+      // Procedural skins (recipe set) always have a rendered PNG preview;
+      // uploaded files only get a preview image if the file itself is one.
+      const isImage =
+        !!skin.recipe ||
+        (!!skin.storage_path && IMAGE_EXTENSIONS.some((ext) => skin.storage_path!.toLowerCase().endsWith(ext)));
+      const previewPath = skin.preview_image_path ?? skin.storage_path;
+
+      let previewUrl: string | null = null;
+      if (isImage && previewPath) {
+        const { data } = await admin.storage.from("skins").createSignedUrl(previewPath, 60 * 10);
+        previewUrl = data?.signedUrl ?? null;
+      }
+      return { ...skin, previewUrl };
+    })
+  );
 
   return (
     <main style={styles.main}>
@@ -21,12 +48,18 @@ export default async function AdminReviewPage() {
         </a>
       </div>
       <div style={styles.list}>
-        {(pending ?? []).map((skin) => (
+        {items.map((skin) => (
           <div key={skin.id} style={styles.card}>
+            {skin.previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={skin.previewUrl} alt={skin.title} style={styles.previewImage} />
+            ) : (
+              <p style={styles.text}>(3D asset — {skin.storage_path})</p>
+            )}
             <h2 style={styles.title}>{skin.title}</h2>
             <p style={styles.text}>{skin.description}</p>
             <p style={styles.text}>
-              ${(skin.price_cents / 100).toFixed(2)} — {skin.storage_path}
+              ${(skin.price_cents / 100).toFixed(2)} {skin.recipe ? "— procedural" : ""}
             </p>
             <div style={styles.actions}>
               <form action={approveSkin}>
@@ -44,7 +77,7 @@ export default async function AdminReviewPage() {
             </div>
           </div>
         ))}
-        {(!pending || pending.length === 0) && (
+        {items.length === 0 && (
           <p style={styles.text}>Nothing waiting on review.</p>
         )}
       </div>
@@ -76,6 +109,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   title: { margin: "0 0 8px" },
   text: { fontSize: "0.85rem", color: "#9aa2b0", margin: "0 0 8px" },
+  previewImage: { width: "100%", maxWidth: "160px", aspectRatio: "1", objectFit: "cover", borderRadius: "8px", marginBottom: "8px" },
   actions: { display: "flex", gap: "8px" },
   approveButton: {
     padding: "8px 16px",

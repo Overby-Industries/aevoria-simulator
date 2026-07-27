@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { uploadSkin } from "./actions";
+import SkinCustomizerWrapper from "@/components/SkinCustomizerWrapper";
+import { createProceduralSkin } from "./actions";
 
-export default async function CreatorUploadPage({
+export default async function CreatorCreatePage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string; submitted?: string }>;
@@ -15,7 +16,7 @@ export default async function CreatorUploadPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?next=/creator/upload");
+    redirect("/login?next=/creator/create");
   }
 
   const { data: profile } = await supabase
@@ -30,15 +31,11 @@ export default async function CreatorUploadPage({
 
   return (
     <main style={styles.main}>
-      <form
-        action={uploadSkin}
-        encType="multipart/form-data"
-        style={styles.card}
-      >
-        <h1 style={styles.heading}>Upload a skin</h1>
+      <form action={createProceduralSkin} style={styles.card}>
+        <h1 style={styles.heading}>Create a procedural skin</h1>
         <p style={styles.text}>
-          Submitted skins go to review before appearing in the marketplace. Don't have a
-          file? <Link href="/creator/create" style={styles.link}>Design one procedurally</Link> instead.
+          Design a pattern with the live preview below, then submit for review. Have a
+          finished file instead? <Link href="/creator/upload" style={styles.link}>Upload it here</Link>.
         </p>
         {params.error && <p style={styles.error}>{params.error}</p>}
         {params.submitted && (
@@ -46,6 +43,8 @@ export default async function CreatorUploadPage({
             Submitted! We'll review it and let you know once it's approved.
           </p>
         )}
+
+        <SkinCustomizerWrapper />
 
         <label style={styles.label}>
           Title
@@ -66,17 +65,6 @@ export default async function CreatorUploadPage({
             step="0.01"
             min="0.50"
             max="500"
-            required
-          />
-        </label>
-
-        <label style={styles.label}>
-          File (PNG, JPG, WEBP, GLB, GLTF — max 25 MB)
-          <input
-            style={styles.input}
-            name="file"
-            type="file"
-            accept=".png,.jpg,.jpeg,.webp,.glb,.gltf"
             required
           />
         </label>
