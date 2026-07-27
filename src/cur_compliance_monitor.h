@@ -89,6 +89,16 @@ public:
     // --- violations -----------------------------------------------------------------
     Array get_violations_for(const String &entity_id) const;
 
+    // --- state names, for UI ---------------------------------------------------------
+    // Wraps libcur's own cur::to_string() so a display never hardcodes a name
+    // table that could drift from the C++ enum definitions.
+    String compliance_state_name(int state) const;
+    String constitutional_state_name(int state) const;
+    String governance_state_name(int state) const;
+    String fault_class_name(int fault) const;
+    String forbidden_state_name(int forbidden) const;
+    String capture_risk_band_name(int band) const;
+
     // --- cur::ICURObserver — re-emitted as Godot signals -------------------------------
     void on_transition(const cur::TransitionResult &r, const cur::EntityRecord &e) override;
     void on_refusal(const cur::TransitionResult &r, const cur::EntityRecord &e) override;

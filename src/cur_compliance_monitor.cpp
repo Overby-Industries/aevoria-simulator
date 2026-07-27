@@ -142,6 +142,13 @@ void CURComplianceMonitor::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("get_violations_for", "entity_id"), &CURComplianceMonitor::get_violations_for);
 
+    ClassDB::bind_method(D_METHOD("compliance_state_name", "state"), &CURComplianceMonitor::compliance_state_name);
+    ClassDB::bind_method(D_METHOD("constitutional_state_name", "state"), &CURComplianceMonitor::constitutional_state_name);
+    ClassDB::bind_method(D_METHOD("governance_state_name", "state"), &CURComplianceMonitor::governance_state_name);
+    ClassDB::bind_method(D_METHOD("fault_class_name", "fault"), &CURComplianceMonitor::fault_class_name);
+    ClassDB::bind_method(D_METHOD("forbidden_state_name", "forbidden"), &CURComplianceMonitor::forbidden_state_name);
+    ClassDB::bind_method(D_METHOD("capture_risk_band_name", "band"), &CURComplianceMonitor::capture_risk_band_name);
+
     ADD_SIGNAL(MethodInfo("transition_accepted",
                           PropertyInfo(Variant::STRING, "entity_id"),
                           PropertyInfo(Variant::INT, "axis"),
@@ -442,6 +449,30 @@ Array CURComplianceMonitor::get_violations_for(const String &entity_id) const {
         out.push_back(violation_record_to_dict(v));
     }
     return out;
+}
+
+String CURComplianceMonitor::compliance_state_name(int state) const {
+    return String::utf8(cur::to_string(static_cast<cur::ComplianceState>(state)));
+}
+
+String CURComplianceMonitor::constitutional_state_name(int state) const {
+    return String::utf8(cur::to_string(static_cast<cur::ConstitutionalState>(state)));
+}
+
+String CURComplianceMonitor::governance_state_name(int state) const {
+    return String::utf8(cur::to_string(static_cast<cur::GovernanceState>(state)));
+}
+
+String CURComplianceMonitor::fault_class_name(int fault) const {
+    return String::utf8(cur::to_string(static_cast<cur::FaultClass>(fault)));
+}
+
+String CURComplianceMonitor::forbidden_state_name(int forbidden) const {
+    return String::utf8(cur::to_string(static_cast<cur::ForbiddenState>(forbidden)));
+}
+
+String CURComplianceMonitor::capture_risk_band_name(int band) const {
+    return String::utf8(cur::to_string(static_cast<cur::CaptureRiskBand>(band)));
 }
 
 void CURComplianceMonitor::on_transition(const cur::TransitionResult &r, const cur::EntityRecord &e) {

@@ -6,10 +6,12 @@ extends Node
 # print through the normal Godot signal path, not a direct return-value read.
 
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
+@onready var hud = $CurHud
 
 func _ready():
 	monitor.transition_accepted.connect(_on_transition_accepted)
 	monitor.violation_detected.connect(_on_violation_detected)
+	hud.set_monitor(monitor)
 
 	var charter = monitor.register_entity(
 		"charter-helga-07", monitor.EC_ECONOMIC, monitor.SUBJ_OPERATIONAL_LICENSE)
