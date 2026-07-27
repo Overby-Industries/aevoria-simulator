@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/AevoriaManager.gd" id="1_manager"]
 [ext_resource type="Script" path="res://scripts/active-alarms.gd" id="2_activealarms"]
@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://scripts/cur-demo.gd" id="11_curdemo"]
 [ext_resource type="PackedScene" path="res://scenes/CurHud.tscn" id="12_curhud"]
 [ext_resource type="Script" path="res://scripts/parts-demo.gd" id="13_partsdemo"]
+[ext_resource type="Script" path="res://scripts/account_panel.gd" id="14_accountpanel"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_manager")
@@ -28,6 +29,9 @@ script = ExtResource("1_manager")
 [node name="MyClass" type="MyClass" parent="."]
 
 [node name="CURComplianceMonitor" type="CURComplianceMonitor" parent="."]
+
+[node name="AccountHud" type="CanvasLayer" parent="."]
+script = ExtResource("14_accountpanel")
 
 [node name="Demos" type="Node" parent="."]
 
