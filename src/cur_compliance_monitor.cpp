@@ -34,6 +34,12 @@ cur::TransitionContext dict_to_context(const Dictionary &d) {
     ctx.life_support_floor_units = uint32_t(int(d.get("life_support_floor_units", 0)));
     ctx.advocate_ref = uint32_t(int64_t(d.get("advocate_ref", int64_t(cur::INVALID_ENTITY))));
     ctx.advocate_cleared = bool(d.get("advocate_cleared", false));
+    ctx.determiner_a_ref = uint32_t(int64_t(d.get("determiner_a_ref", int64_t(cur::INVALID_ENTITY))));
+    ctx.determiner_b_ref = uint32_t(int64_t(d.get("determiner_b_ref", int64_t(cur::INVALID_ENTITY))));
+    ctx.determiner_interest_present = bool(d.get("determiner_interest_present", false));
+    ctx.observation_elapsed_ticks = uint64_t(int64_t(d.get("observation_elapsed_ticks", int64_t(0))));
+    ctx.observation_required_ticks = uint64_t(int64_t(d.get("observation_required_ticks", int64_t(0))));
+    ctx.observation_sustained = bool(d.get("observation_sustained", false));
     return ctx;
 }
 
@@ -318,6 +324,9 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_ADVOCATE_APPOINTED", cur::EV_ADVOCATE_APPOINTED);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_ADVOCATE_ACCESS_DENIED", cur::EV_ADVOCATE_ACCESS_DENIED);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_REPRESENTED_DETERMINATION", cur::EV_REPRESENTED_DETERMINATION);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_DEATH_DETERMINED", cur::EV_DEATH_DETERMINED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_IRREVERSIBLE_ACT", cur::EV_IRREVERSIBLE_ACT);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_DETERMINATION_VACATED", cur::EV_DETERMINATION_VACATED);
 
     // AdvocateDomain (cur_advocate.h)
     ClassDB::bind_integer_constant(get_class_static(), "", "ADOM_ANIMAL", cur::ADOM_ANIMAL);
