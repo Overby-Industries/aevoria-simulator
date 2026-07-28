@@ -30,6 +30,7 @@ class CURComplianceMonitor : public Node, public cur::ICURObserver {
 
 private:
     cur::CURStateMachine machine;
+    cur::AdvocateRegistry advocate_registry;  // CUR-A §7.7, CUR-E §1.6
     Array regulations;  // expected to hold CURGodotBridge resources
 
     void load_configured_regulations();
@@ -88,6 +89,28 @@ public:
 
     // --- violations -----------------------------------------------------------------
     Array get_violations_for(const String &entity_id) const;
+
+    // --- advocate registry, CUR-A §7.7 / CUR-E §1.6 -----------------------------------
+    // Representation of interests that cannot speak for themselves. Confers no
+    // authority over any being -- cur::AdvocateRegistry::confers_authority() is
+    // false unconditionally; nothing here produces a measure, sanction, or
+    // state change. determination_permitted() is what a caller reports through
+    // TransitionContext::advocate_cleared before submitting
+    // EV_REPRESENTED_DETERMINATION.
+    void declare_party(const String &proceeding_id, int64_t party_handle);
+    void record_party_representation(const String &proceeding_id, int64_t advocate_handle,
+                                     int64_t party_handle);
+    // declaration keys: advocate, represented, domain, proceeding_id,
+    // expertise_demonstrated, dependent_on_party, interest_in_outcome,
+    // stewardship_relationship, stewards_consulted -- see cur_advocate.h's
+    // AdvocateDeclaration. Returns an AdvocateResult (ADV_APPOINTED on success).
+    int appoint_advocate(const Dictionary &declaration, int64_t tick);
+    int64_t advocate_for(const String &proceeding_id, int64_t represented_handle) const;
+    bool determination_permitted(const String &proceeding_id, int64_t represented_handle) const;
+    bool void_advocate_appointment(const String &proceeding_id, int64_t represented_handle,
+                                   int reason, int64_t tick);
+    String advocate_result_name(int result) const;
+    String advocate_domain_name(int domain) const;
 
     // --- state names, for UI ---------------------------------------------------------
     // Wraps libcur's own cur::to_string() so a display never hardcodes a name

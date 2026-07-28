@@ -55,6 +55,8 @@ void CURGodotBridge::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "GUARD_LICENSE_SUBJECT_ONLY", cur::guard::LICENSE_SUBJECT_ONLY);
     ClassDB::bind_integer_constant(get_class_static(), "", "GUARD_REMEDIATION_VERIFIED", cur::guard::REMEDIATION_VERIFIED);
     ClassDB::bind_integer_constant(get_class_static(), "", "GUARD_COURT_CERTIFIED", cur::guard::COURT_CERTIFIED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "GUARD_LIFE_SUPPORT_MARGIN", cur::guard::LIFE_SUPPORT_MARGIN);
+    ClassDB::bind_integer_constant(get_class_static(), "", "GUARD_ADVOCATE_CLEARED", cur::guard::ADVOCATE_CLEARED);
 
     // FaultClass (cur_state.h)
     ClassDB::bind_integer_constant(get_class_static(), "", "FC_NONE", cur::FC_NONE);

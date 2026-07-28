@@ -30,6 +30,10 @@ cur::TransitionContext dict_to_context(const Dictionary &d) {
     ctx.debris_units = uint32_t(int(d.get("debris_units", 0)));
     ctx.debris_limit = uint32_t(int(d.get("debris_limit", 0)));
     ctx.commons_reserve_basis_points = uint32_t(int(d.get("commons_reserve_basis_points", 0)));
+    ctx.life_support_reserve_units = uint32_t(int(d.get("life_support_reserve_units", 0)));
+    ctx.life_support_floor_units = uint32_t(int(d.get("life_support_floor_units", 0)));
+    ctx.advocate_ref = uint32_t(int64_t(d.get("advocate_ref", int64_t(cur::INVALID_ENTITY))));
+    ctx.advocate_cleared = bool(d.get("advocate_cleared", false));
     return ctx;
 }
 
@@ -141,6 +145,21 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_method(D_METHOD("export_audit_json", "max_records"), &CURComplianceMonitor::export_audit_json, DEFVAL(0));
 
     ClassDB::bind_method(D_METHOD("get_violations_for", "entity_id"), &CURComplianceMonitor::get_violations_for);
+
+    ClassDB::bind_method(D_METHOD("declare_party", "proceeding_id", "party_handle"),
+                         &CURComplianceMonitor::declare_party);
+    ClassDB::bind_method(D_METHOD("record_party_representation", "proceeding_id", "advocate_handle", "party_handle"),
+                         &CURComplianceMonitor::record_party_representation);
+    ClassDB::bind_method(D_METHOD("appoint_advocate", "declaration", "tick"),
+                         &CURComplianceMonitor::appoint_advocate);
+    ClassDB::bind_method(D_METHOD("advocate_for", "proceeding_id", "represented_handle"),
+                         &CURComplianceMonitor::advocate_for);
+    ClassDB::bind_method(D_METHOD("determination_permitted", "proceeding_id", "represented_handle"),
+                         &CURComplianceMonitor::determination_permitted);
+    ClassDB::bind_method(D_METHOD("void_advocate_appointment", "proceeding_id", "represented_handle", "reason", "tick"),
+                         &CURComplianceMonitor::void_advocate_appointment);
+    ClassDB::bind_method(D_METHOD("advocate_result_name", "result"), &CURComplianceMonitor::advocate_result_name);
+    ClassDB::bind_method(D_METHOD("advocate_domain_name", "domain"), &CURComplianceMonitor::advocate_domain_name);
 
     ClassDB::bind_method(D_METHOD("compliance_state_name", "state"), &CURComplianceMonitor::compliance_state_name);
     ClassDB::bind_method(D_METHOD("constitutional_state_name", "state"), &CURComplianceMonitor::constitutional_state_name);
@@ -296,6 +315,24 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_CERTIFICATION_REVOKED", cur::EV_CERTIFICATION_REVOKED);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_REMEDIATION_COMPLETED", cur::EV_REMEDIATION_COMPLETED);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_REVIEW_TIMEOUT", cur::EV_REVIEW_TIMEOUT);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_ADVOCATE_APPOINTED", cur::EV_ADVOCATE_APPOINTED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_ADVOCATE_ACCESS_DENIED", cur::EV_ADVOCATE_ACCESS_DENIED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_REPRESENTED_DETERMINATION", cur::EV_REPRESENTED_DETERMINATION);
+
+    // AdvocateDomain (cur_advocate.h)
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADOM_ANIMAL", cur::ADOM_ANIMAL);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADOM_ENVIRONMENTAL", cur::ADOM_ENVIRONMENTAL);
+
+    // AdvocateResult (cur_advocate.h) — why appoint_advocate() succeeded or refused.
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_APPOINTED", cur::ADV_APPOINTED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_UNKNOWN_PARTY", cur::ADV_REFUSED_UNKNOWN_PARTY);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_SELF_REPRESENTATION", cur::ADV_REFUSED_SELF_REPRESENTATION);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_NO_EXPERTISE", cur::ADV_REFUSED_NO_EXPERTISE);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_DEPENDENT_ON_PARTY", cur::ADV_REFUSED_DEPENDENT_ON_PARTY);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_INTEREST_IN_OUTCOME", cur::ADV_REFUSED_INTEREST_IN_OUTCOME);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_ADVERSE_REPRESENTATION", cur::ADV_REFUSED_ADVERSE_REPRESENTATION);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_STEWARDS_NOT_CONSULTED", cur::ADV_REFUSED_STEWARDS_NOT_CONSULTED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "ADV_REFUSED_ALREADY_APPOINTED", cur::ADV_REFUSED_ALREADY_APPOINTED);
 }
 
 CURComplianceMonitor::CURComplianceMonitor() {
@@ -449,6 +486,55 @@ Array CURComplianceMonitor::get_violations_for(const String &entity_id) const {
         out.push_back(violation_record_to_dict(v));
     }
     return out;
+}
+
+void CURComplianceMonitor::declare_party(const String &proceeding_id, int64_t party_handle) {
+    advocate_registry.declare_party(to_std(proceeding_id), static_cast<cur::EntityHandle>(party_handle));
+}
+
+void CURComplianceMonitor::record_party_representation(const String &proceeding_id, int64_t advocate_handle,
+                                                        int64_t party_handle) {
+    advocate_registry.record_party_representation(to_std(proceeding_id),
+        static_cast<cur::EntityHandle>(advocate_handle), static_cast<cur::EntityHandle>(party_handle));
+}
+
+int CURComplianceMonitor::appoint_advocate(const Dictionary &declaration, int64_t tick) {
+    cur::AdvocateDeclaration d;
+    d.advocate = static_cast<cur::EntityHandle>(int64_t(declaration.get("advocate", int64_t(cur::INVALID_ENTITY))));
+    d.represented = static_cast<cur::EntityHandle>(int64_t(declaration.get("represented", int64_t(cur::INVALID_ENTITY))));
+    d.domain = static_cast<cur::AdvocateDomain>(int(declaration.get("domain", int(cur::ADOM_ANIMAL))));
+    d.proceeding_id = to_std(String(declaration.get("proceeding_id", String())));
+    d.expertise_demonstrated = bool(declaration.get("expertise_demonstrated", false));
+    d.dependent_on_party = bool(declaration.get("dependent_on_party", false));
+    d.interest_in_outcome = bool(declaration.get("interest_in_outcome", false));
+    d.stewardship_relationship = bool(declaration.get("stewardship_relationship", false));
+    d.stewards_consulted = bool(declaration.get("stewards_consulted", false));
+    return int(advocate_registry.appoint(d, machine.entities(), uint64_t(tick)));
+}
+
+int64_t CURComplianceMonitor::advocate_for(const String &proceeding_id, int64_t represented_handle) const {
+    return int64_t(advocate_registry.advocate_for(to_std(proceeding_id),
+                                                   static_cast<cur::EntityHandle>(represented_handle)));
+}
+
+bool CURComplianceMonitor::determination_permitted(const String &proceeding_id, int64_t represented_handle) const {
+    return advocate_registry.determination_permitted(to_std(proceeding_id),
+                                                      static_cast<cur::EntityHandle>(represented_handle));
+}
+
+bool CURComplianceMonitor::void_advocate_appointment(const String &proceeding_id, int64_t represented_handle,
+                                                     int reason, int64_t tick) {
+    return advocate_registry.void_appointment(to_std(proceeding_id),
+        static_cast<cur::EntityHandle>(represented_handle), static_cast<cur::AdvocateResult>(reason),
+        uint64_t(tick));
+}
+
+String CURComplianceMonitor::advocate_result_name(int result) const {
+    return String::utf8(cur::to_string(static_cast<cur::AdvocateResult>(result)));
+}
+
+String CURComplianceMonitor::advocate_domain_name(int domain) const {
+    return String::utf8(cur::to_string(static_cast<cur::AdvocateDomain>(domain)));
 }
 
 String CURComplianceMonitor::compliance_state_name(int state) const {
