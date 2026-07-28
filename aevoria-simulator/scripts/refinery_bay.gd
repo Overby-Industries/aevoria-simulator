@@ -10,6 +10,7 @@ extends Node3D
 ## repeat of the same one.
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
 const RECIPES = [
 	{"name": "Smelt Gold", "input_resource": "PGM", "input_amount": 15.0, "output_resource": "Gold", "output_amount": 5.0, "glow": Color("ffd54a")},
@@ -32,40 +33,29 @@ func _ready():
 
 func _spawn_furnace(index: int) -> void:
 	var recipe = RECIPES[index]
+	var body_position = Vector3((index - 1) * 3.2, 0, 0)
 
-	var body = MeshInstance3D.new()
-	var mesh = BoxMesh.new()
-	mesh.size = Vector3(2.0, 1.8, 1.4)
-	body.mesh = mesh
+	var body = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(2.0, 1.8, 1.4),
+		"albedo_color": Color("221812"),
+	})
 	body.name = "Furnace%d" % index
-	body.position = Vector3((index - 1) * 3.2, 0, 0)
-
-	var material = StandardMaterial3D.new()
-	material.albedo_color = Color("221812")
-	body.material_override = material
+	body.position = body_position
 	add_child(body)
 
 	# Molten-metal "window" in the furnace face -- an emissive slab
 	# tinted per-recipe so the three furnaces read as different outputs
 	# at a glance, same cheap-and-readable stand-in as Greenhouse's LEDs.
-	var window = MeshInstance3D.new()
-	var window_mesh = BoxMesh.new()
-	window_mesh.size = Vector3(1.2, 0.7, 0.05)
-	window.mesh = window_mesh
-	window.position = body.position + Vector3(0, 0, 0.72)
-	var window_material = StandardMaterial3D.new()
-	window_material.albedo_color = recipe["glow"]
-	window_material.emission_enabled = true
-	window_material.emission = recipe["glow"]
-	window_material.emission_energy_multiplier = 2.2
-	window.material_override = window_material
+	var window = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(1.2, 0.7, 0.05),
+		"albedo_color": recipe["glow"],
+		"emission_color": recipe["glow"], "emission_energy": 2.2,
+	})
+	window.position = body_position + Vector3(0, 0, 0.72)
 	add_child(window)
 
-	var light = OmniLight3D.new()
-	light.light_color = recipe["glow"]
-	light.light_energy = 1.1
-	light.omni_range = 4.0
-	light.position = body.position + Vector3(0, 1.1, 0.7)
+	var light = SimpleShapes.make_point_light(recipe["glow"], 1.1, 4.0)
+	light.position = body_position + Vector3(0, 1.1, 0.7)
 	add_child(light)
 
 func _build_ui():

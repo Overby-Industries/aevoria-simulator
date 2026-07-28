@@ -10,6 +10,7 @@ extends Node3D
 ## testable headless the same way -- no wall-clock timers to fake.
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
 const H2O_COST: float = 10.0
 const FOOD_YIELD: float = 6.0
@@ -24,48 +25,59 @@ var _harvested_this_session: float = 0.0
 func _ready():
 	for i in range(BAY_COUNT):
 		_spawn_bay_rack(i)
+	_spawn_desk()
 	_build_ui()
 	_refresh()
 	camera.make_current()
 
 func _spawn_bay_rack(index: int) -> void:
-	var rack = MeshInstance3D.new()
-	var mesh = BoxMesh.new()
-	mesh.size = Vector3(2.4, 1.6, 1.2)
-	rack.mesh = mesh
-	rack.name = "GrowBay%d" % index
-	rack.position = Vector3((index - 1) * 3.2, 0, 0)
+	var rack_position = Vector3((index - 1) * 3.2, 0, 0)
 
-	var material = StandardMaterial3D.new()
-	material.albedo_color = Color("15221a")
-	material.emission_enabled = true
-	material.emission = Color("59ff9c")
-	material.emission_energy_multiplier = 0.35
-	rack.material_override = material
+	var rack = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(2.4, 1.6, 1.2),
+		"albedo_color": Color("15221a"),
+		"emission_color": Color("59ff9c"), "emission_energy": 0.35,
+	})
+	rack.name = "GrowBay%d" % index
+	rack.position = rack_position
 	add_child(rack)
 
 	# Stand-in "LED strip" -- a bright thin emissive slab along the top
 	# of the rack, per the user's "rooms with LEDS lights" note. Cheap
 	# and readable at this scale; real fixtures can come later.
-	var led = MeshInstance3D.new()
-	var led_mesh = BoxMesh.new()
-	led_mesh.size = Vector3(2.2, 0.08, 1.0)
-	led.mesh = led_mesh
-	led.position = rack.position + Vector3(0, 0.85, 0)
-	var led_material = StandardMaterial3D.new()
-	led_material.albedo_color = Color("d8fff0")
-	led_material.emission_enabled = true
-	led_material.emission = Color("8dffc2")
-	led_material.emission_energy_multiplier = 2.5
-	led.material_override = led_material
+	var led = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(2.2, 0.08, 1.0),
+		"albedo_color": Color("d8fff0"),
+		"emission_color": Color("8dffc2"), "emission_energy": 2.5,
+	})
+	led.position = rack_position + Vector3(0, 0.85, 0)
 	add_child(led)
 
-	var light = OmniLight3D.new()
-	light.light_color = Color("8dffc2")
-	light.light_energy = 1.2
-	light.omni_range = 4.0
-	light.position = rack.position + Vector3(0, 1.3, 0)
+	var light = SimpleShapes.make_point_light(Color("8dffc2"), 1.2, 4.0)
+	light.position = rack_position + Vector3(0, 1.3, 0)
 	add_child(light)
+
+## Worked example for docs/GRAPHICS_GUIDE.md's "add a prop to a room"
+## walkthrough: a plain two-box desk (tabletop + support block), same
+## SimpleShapes pattern as every other prop in this file. Copy this
+## function as the starting point for any other static room furniture --
+## no C++, no rebuild, just a new function and one call from _ready().
+func _spawn_desk() -> void:
+	var desk_top = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(1.4, 0.08, 0.8),
+		"albedo_color": Color("2a3038"),
+	})
+	desk_top.name = "DeskTop"
+	desk_top.position = Vector3(0, -0.3, 3.0)
+	add_child(desk_top)
+
+	var desk_support = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(1.2, 0.5, 0.6),
+		"albedo_color": Color("1c2128"),
+	})
+	desk_support.name = "DeskSupport"
+	desk_support.position = Vector3(0, -0.55, 3.0)
+	add_child(desk_support)
 
 func _build_ui():
 	var canvas = CanvasLayer.new()

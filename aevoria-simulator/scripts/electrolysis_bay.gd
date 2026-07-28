@@ -10,6 +10,7 @@ extends Node3D
 ## two add_resource calls, no new system needed.
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
 const H2O_COST: float = 10.0
 const POTABLE_WATER_YIELD: float = 6.0
@@ -31,28 +32,19 @@ func _ready():
 	camera.make_current()
 
 func _spawn_tank(index: int) -> void:
-	var tank = MeshInstance3D.new()
-	var mesh = CylinderMesh.new()
-	mesh.top_radius = 0.9
-	mesh.bottom_radius = 0.9
-	mesh.height = 2.0
-	tank.mesh = mesh
-	tank.name = "ElectrolysisTank%d" % index
-	tank.position = Vector3((index - 1) * 3.0, 0, 0)
+	var tank_position = Vector3((index - 1) * 3.0, 0, 0)
 
-	var material = StandardMaterial3D.new()
-	material.albedo_color = Color("0e2230")
-	material.emission_enabled = true
-	material.emission = Color("4ad6ff")
-	material.emission_energy_multiplier = 0.5
-	tank.material_override = material
+	var tank = SimpleShapes.make_mesh_instance({
+		"shape": "cylinder", "radius": 0.9, "height": 2.0,
+		"albedo_color": Color("0e2230"),
+		"emission_color": Color("4ad6ff"), "emission_energy": 0.5,
+	})
+	tank.name = "ElectrolysisTank%d" % index
+	tank.position = tank_position
 	add_child(tank)
 
-	var light = OmniLight3D.new()
-	light.light_color = Color("4ad6ff")
-	light.light_energy = 1.2
-	light.omni_range = 4.0
-	light.position = tank.position + Vector3(0, 1.3, 0)
+	var light = SimpleShapes.make_point_light(Color("4ad6ff"), 1.2, 4.0)
+	light.position = tank_position + Vector3(0, 1.3, 0)
 	add_child(light)
 
 func _build_ui():

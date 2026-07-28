@@ -138,24 +138,29 @@ The Aevoria Simulator is the playable proving ground for the broader Overby Indu
 
 ## 🚀 Getting Started
 
-*(Note: Engine and build instructions will be updated as the simulation architecture is finalized.)*
-
 ### Prerequisites
-*   [Engine/Environment, e.g., Godot 4.1, godot-cpp, SCons]
-*   [Dependencies, e.g., Python 3.11+]
+*   [Godot 4.6.3](https://godotengine.org/download/archive/4.6.3-stable/) (stable)
+*   Python 3 with SCons (`pip install scons`) — builds the GDExtension
+*   A C++17 compiler (MSVC on Windows)
 
 ### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/Overby-Industries/aevoria-simulator.git
+# Clone the repository, including the godot-cpp and cur submodules
+git clone --recurse-submodules https://github.com/Overby-Industries/aevoria-simulator.git
 cd aevoria-simulator
 
-# Install dependencies
-[Insert installation commands here]
+# Build the GDExtension (debug target, for day-to-day use)
+python -m SCons platform=windows target=template_debug -j4
 
 # Launch the simulation
-[Insert launch command here]
+"<path to godot>/Godot_v4.6.3-stable_win64_console.exe" --path aevoria-simulator
 ```
+
+Full build/run/troubleshooting details, project layout, and how to make
+your own changes (including the procedural graphics system — every ship,
+resource node, and room prop is code-generated, no imported 3D models) live
+in [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md).
 
 ## 🛠️ Contributing to the Simulation
 This is an open-source, democratic project. We need Red Teamers, Governance Designers, and AI Ethicists.
