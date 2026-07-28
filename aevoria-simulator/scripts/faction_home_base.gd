@@ -49,3 +49,15 @@ static func add_resource(faction_id: String, resource_name: String, amount: floa
 	var state = load_state(faction_id)
 	state["resources"][resource_name] = float(state["resources"].get(resource_name, 0.0)) + amount
 	save_state(state)
+
+## Returns false (no state change) if the faction doesn't have enough
+## banked -- callers gate their action on this rather than letting the
+## commons go negative.
+static func spend_resource(faction_id: String, resource_name: String, amount: float) -> bool:
+	var state = load_state(faction_id)
+	var current = float(state["resources"].get(resource_name, 0.0))
+	if current < amount:
+		return false
+	state["resources"][resource_name] = current - amount
+	save_state(state)
+	return true

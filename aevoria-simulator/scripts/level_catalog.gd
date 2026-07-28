@@ -8,7 +8,7 @@ extends RefCounted
 ## adding more factions later is just more catalog entries, not a new
 ## system.
 
-enum Kind { EXTRACTION, GOVERNANCE }
+enum Kind { EXTRACTION, GOVERNANCE, PRODUCTION }
 
 const AEVORIA_COMMONWEALTH = "aevoria_commonwealth"
 
@@ -45,5 +45,13 @@ static func build_levels() -> Array:
 			"title": "Asteroid Field Prospecting",
 			"objective": "Scan the field and mine asteroids for PGMs, comets for H2O -- resources bank straight to the Commonwealth commons.",
 			"scene_path": "res://scenes/AsteroidField.tscn",
+		},
+		{
+			"id": "production_greenhouse_bay",
+			"kind": Kind.PRODUCTION,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "Greenhouse Bay",
+			"objective": "Spend banked H2O in the station's LED grow bays to produce Food for the Commonwealth commons.",
+			"scene_path": "res://scenes/GreenhouseBay.tscn",
 		},
 	]

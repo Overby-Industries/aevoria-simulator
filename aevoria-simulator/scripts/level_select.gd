@@ -25,9 +25,18 @@ func _build_ui() -> void:
 	panel.position = Vector2(340, 20)
 	canvas.add_child(panel)
 
+	# The level roster no longer fits a fixed-height window now that
+	# there are five cards -- same off-screen-content bug that hit
+	# AssemblyBay earlier, same fix: cap the panel height and scroll.
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(420, 500)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
+
 	var outer = VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_theme_constant_override("separation", 10)
-	panel.add_child(outer)
+	scroll.add_child(outer)
 
 	var header = Label.new()
 	header.text = "AEVORIA COMMONWEALTH — LEVEL SELECT"
