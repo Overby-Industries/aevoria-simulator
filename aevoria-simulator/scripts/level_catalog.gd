@@ -31,6 +31,14 @@ static func build_levels() -> Array:
 			"scene_path": "res://scenes/GovernanceLevel.tscn",
 		},
 		{
+			"id": "governance_reef_advocate",
+			"kind": Kind.GOVERNANCE,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "The Reef's Advocate",
+			"objective": "Appoint an advocate for a reef habitat that can't speak for itself before a mining expansion determination can proceed -- CUR-E §1.6.",
+			"scene_path": "res://scenes/AdvocateLevel.tscn",
+		},
+		{
 			"id": "prospecting_asteroid_field",
 			"kind": Kind.EXTRACTION,
 			"faction_id": AEVORIA_COMMONWEALTH,
