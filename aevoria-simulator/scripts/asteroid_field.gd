@@ -11,6 +11,7 @@ extends Node3D
 
 const ResourceNodeCatalog = preload("res://scripts/resource_node_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -34,12 +35,16 @@ func _ready():
 	camera.make_current()
 
 func _spawn_node_mesh(node_data: Dictionary) -> void:
-	var mesh = SphereMesh.new()
-	mesh.radial_segments = 12
-	mesh.rings = 8
+	var generator = ProceduralArtGenerator.new()
+	var texture = generator.generate_procedural_texture(node_data["texture_recipe"], 128, 128)
+	var is_comet: bool = node_data["node_type"] == "comet"
 
-	var instance = MeshInstance3D.new()
-	instance.mesh = mesh
+	var instance = SimpleShapes.make_mesh_instance({
+		"shape": "sphere", "radial_segments": 12, "rings": 8,
+		"albedo_texture": texture,
+		"emission_color": Color("6fb8ff") if is_comet else Color("ffd54a"),
+		"emission_energy": 0.4 if is_comet else 0.25,
+	})
 	instance.name = node_data["id"]
 	instance.position = node_data["position"]
 	# Cheap stand-in for irregular rock/ice shapes without real mesh
@@ -48,20 +53,6 @@ func _spawn_node_mesh(node_data: Dictionary) -> void:
 	instance.scale = Vector3(
 		randf_range(0.7, 1.3), randf_range(0.6, 1.1), randf_range(0.7, 1.3)
 	)
-
-	var generator = ProceduralArtGenerator.new()
-	var texture = generator.generate_procedural_texture(node_data["texture_recipe"], 128, 128)
-	var material = StandardMaterial3D.new()
-	material.albedo_texture = texture
-	if node_data["node_type"] == "comet":
-		material.emission_enabled = true
-		material.emission = Color("6fb8ff")
-		material.emission_energy_multiplier = 0.4
-	else:
-		material.emission_enabled = true
-		material.emission = Color("ffd54a")
-		material.emission_energy_multiplier = 0.25
-	instance.material_override = material
 
 	add_child(instance)
 	_mesh_by_id[node_data["id"]] = instance
