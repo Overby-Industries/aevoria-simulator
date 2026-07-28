@@ -54,4 +54,20 @@ static func build_levels() -> Array:
 			"objective": "Spend banked H2O in the station's LED grow bays to produce Food for the Commonwealth commons.",
 			"scene_path": "res://scenes/GreenhouseBay.tscn",
 		},
+		{
+			"id": "production_refinery_bay",
+			"kind": Kind.PRODUCTION,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "Refinery Bay",
+			"objective": "Smelt banked PGM into Gold, Platinum, and Steel for the Commonwealth commons.",
+			"scene_path": "res://scenes/RefineryBay.tscn",
+		},
+		{
+			"id": "production_electrolysis_bay",
+			"kind": Kind.PRODUCTION,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "Electrolysis Bay",
+			"objective": "Split banked H2O into Potable Water and O2 to sustain the station's life support.",
+			"scene_path": "res://scenes/ElectrolysisBay.tscn",
+		},
 	]
