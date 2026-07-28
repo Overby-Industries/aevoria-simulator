@@ -1,12 +1,64 @@
 #include "part_definition.h"
 
+#include <godot_cpp/classes/array_mesh.hpp>
 #include <godot_cpp/classes/box_mesh.hpp>
 #include <godot_cpp/classes/capsule_mesh.hpp>
 #include <godot_cpp/classes/cylinder_mesh.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/surface_tool.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
 using namespace godot;
+
+namespace {
+
+// One solid swept-delta wing: a planform triangle (root leading edge, root
+// trailing edge, swept-back tip) extruded by `thickness` along Z into a
+// thin wedge. `mirror` reflects the planform across X for the opposite
+// wing -- a reflection has determinant -1, so triangle winding is flipped
+// too (via swapped vertex order in add_tri), or the mirrored wing would
+// render inside-out (back-face culled from the camera's usual side).
+Ref<ArrayMesh> build_delta_wing_mesh(float span, float root_chord, float tip_sweep,
+                                     float thickness, bool mirror) {
+    const float sign = mirror ? -1.0f : 1.0f;
+    const float half_chord = root_chord * 0.5f;
+
+    const Vector3 root_lead(0, half_chord, 0);
+    const Vector3 root_trail(0, -half_chord, 0);
+    const Vector3 tip(sign * span, -half_chord - tip_sweep, 0);
+
+    const Vector3 front_offset(0, 0, thickness * 0.5f);
+    const Vector3 back_offset(0, 0, -thickness * 0.5f);
+
+    const Vector3 fl = root_lead + front_offset, ft = root_trail + front_offset, fp = tip + front_offset;
+    const Vector3 bl = root_lead + back_offset, bt = root_trail + back_offset, bp = tip + back_offset;
+
+    Ref<SurfaceTool> st;
+    st.instantiate();
+    st->begin(Mesh::PRIMITIVE_TRIANGLES);
+
+    auto add_tri = [&](const Vector3 &a, const Vector3 &b, const Vector3 &c) {
+        st->add_vertex(a);
+        if (mirror) {
+            st->add_vertex(c);
+            st->add_vertex(b);
+        } else {
+            st->add_vertex(b);
+            st->add_vertex(c);
+        }
+    };
+
+    add_tri(fl, ft, fp);                    // front face
+    add_tri(bp, bt, bl);                    // back face (already reverse-ordered vs. front)
+    add_tri(fl, fp, bp); add_tri(fl, bp, bl); // leading-edge side
+    add_tri(ft, bt, bp); add_tri(ft, bp, fp); // trailing-edge side
+    add_tri(fl, bl, bt); add_tri(fl, bt, ft); // root side (fuselage-facing)
+
+    st->generate_normals();
+    return st->commit();
+}
+
+}  // namespace
 
 void PartDefinition::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_part_id", "id"), &PartDefinition::set_part_id);
@@ -101,6 +153,11 @@ Dictionary PartDefinition::find_socket(const String &socket_id) const {
 
 Node3D *PartDefinition::build_mesh_node() const {
     String shape = mesh_recipe.get("shape", "box");
+
+    if (shape == "winged_fuselage") {
+        return build_winged_fuselage();
+    }
+
     Ref<Mesh> mesh;
 
     if (shape == "cylinder") {
@@ -126,4 +183,62 @@ Node3D *PartDefinition::build_mesh_node() const {
     instance->set_mesh(mesh);
     instance->set_name(display_name.is_empty() ? part_id : display_name);
     return instance;
+}
+
+Node3D *PartDefinition::build_winged_fuselage() const {
+    const float radius = float(double(mesh_recipe.get("radius", 0.5)));
+    const float height = float(double(mesh_recipe.get("height", 2.0)));
+    const float nose_length = float(double(mesh_recipe.get("nose_length", 0.6)));
+    const float nose_tip_radius = float(double(mesh_recipe.get("nose_tip_radius", 0.04)));
+    const float wing_span = float(double(mesh_recipe.get("wing_span", 1.6)));
+    const float wing_root_chord = float(double(mesh_recipe.get("wing_root_chord", 1.6)));
+    const float wing_tip_sweep = float(double(mesh_recipe.get("wing_tip_sweep", 1.4)));
+    const float wing_thickness = float(double(mesh_recipe.get("wing_thickness", 0.1)));
+    const float wing_y_offset = float(double(mesh_recipe.get("wing_y_offset", -0.3)));
+
+    Node3D *root = memnew(Node3D);
+    root->set_name(display_name.is_empty() ? part_id : display_name);
+
+    // Body: the capsule shape this hull already used, unchanged -- the
+    // "top" (+Y) hemisphere cap gets covered by the nose cone below, the
+    // "bottom" (-Y) cap stays as the rounded tail.
+    Ref<CapsuleMesh> body_mesh = memnew(CapsuleMesh);
+    body_mesh->set_radius(radius);
+    body_mesh->set_height(height);
+    MeshInstance3D *body = memnew(MeshInstance3D);
+    body->set_mesh(body_mesh);
+    body->set_name("Body");
+    root->add_child(body);
+
+    // Nose cone: a CylinderMesh tapering from the body's radius down to a
+    // near-point, base positioned at the capsule's "shoulder" (where its
+    // dome starts, already at full radius) so the two surfaces meet
+    // without an awkward step -- CylinderMesh's own long axis is already Y,
+    // same as CapsuleMesh's, so no rotation is needed to line them up.
+    Ref<CylinderMesh> nose_mesh = memnew(CylinderMesh);
+    nose_mesh->set_top_radius(nose_tip_radius);
+    nose_mesh->set_bottom_radius(radius);
+    nose_mesh->set_height(nose_length);
+    MeshInstance3D *nose = memnew(MeshInstance3D);
+    nose->set_mesh(nose_mesh);
+    nose->set_name("Nose");
+    const float shoulder_y = height * 0.5f - radius;
+    nose->set_position(Vector3(0, shoulder_y + nose_length * 0.5f, 0));
+    root->add_child(nose);
+
+    // Wings: a mirrored pair of swept delta wings, root chord embedded in
+    // the fuselage at wing_y_offset (embedding the inner edge inside the
+    // solid body is simplest and matches how socket-attached parts already
+    // just sit at their socket position with no separate fitting step).
+    for (bool mirror : {false, true}) {
+        Ref<ArrayMesh> wing_mesh = build_delta_wing_mesh(wing_span, wing_root_chord, wing_tip_sweep,
+                                                         wing_thickness, mirror);
+        MeshInstance3D *wing = memnew(MeshInstance3D);
+        wing->set_mesh(wing_mesh);
+        wing->set_name(mirror ? "WingLeft" : "WingRight");
+        wing->set_position(Vector3(0, wing_y_offset, 0));
+        root->add_child(wing);
+    }
+
+    return root;
 }

@@ -91,6 +91,15 @@ public:
     // Builds a fresh MeshInstance3D from mesh_recipe. Bound so a part palette
     // UI can preview a single part without going through PartAssembler.
     Node3D *build_mesh_node() const;
+
+private:
+    // "winged_fuselage" shape: a capsule body + tapered nose cone + a pair
+    // of swept delta wings, all built from mesh_recipe keys. Returns a
+    // plain Node3D wrapping several MeshInstance3D children rather than a
+    // single MeshInstance3D -- PartAssembler::assemble() walks the built
+    // tree for meshes to skin, so this composes cleanly with the existing
+    // single-primitive shapes without needing a new part-attachment system.
+    Node3D *build_winged_fuselage() const;
 };
 
 }  // namespace godot
