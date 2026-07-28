@@ -91,7 +91,12 @@ static func build_demo_catalog() -> Array:
 	ssto_hull.display_name = "SSTO Hull -- Project Helga"
 	ssto_hull.category = PartDefinition.CAT_HULL_SEGMENT
 	ssto_hull.faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
-	ssto_hull.mesh_recipe = {"shape": "capsule", "radius": 0.55, "height": 3.6}
+	ssto_hull.mesh_recipe = {
+		"shape": "winged_fuselage", "radius": 0.55, "height": 3.6,
+		"nose_length": 0.8, "nose_tip_radius": 0.04,
+		"wing_span": 1.8, "wing_root_chord": 1.7, "wing_tip_sweep": 1.5,
+		"wing_thickness": 0.1, "wing_y_offset": -0.3,
+	}
 	ssto_hull.sockets = [
 		{"id": "fore", "position": Vector3(0, 0, -1.8), "rotation_deg": Vector3.ZERO, "accepts": 1 << PartDefinition.CAT_DRILL_ARM},
 		{"id": "aft", "position": Vector3(0, 0, 1.8), "rotation_deg": Vector3.ZERO, "accepts": 1 << PartDefinition.CAT_THRUSTER},

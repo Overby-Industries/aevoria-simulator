@@ -31,6 +31,23 @@ Color hex_to_color(const Dictionary &recipe, const String &key, const Color &fal
     return Color(hex);
 }
 
+// Most part shapes are a single MeshInstance3D, but a composite shape (e.g.
+// build_winged_fuselage's body+nose+wings) returns a plain Node3D wrapping
+// several -- walk the whole subtree so every mesh in a composite part gets
+// the same skin texture as everything else, not just the parts that happen
+// to be a MeshInstance3D themselves.
+void collect_mesh_instances(Node3D *node, std::vector<MeshInstance3D *> &out) {
+    if (node == nullptr) {
+        return;
+    }
+    if (MeshInstance3D *mesh = Object::cast_to<MeshInstance3D>(node)) {
+        out.push_back(mesh);
+    }
+    for (int i = 0; i < node->get_child_count(); ++i) {
+        collect_mesh_instances(Object::cast_to<Node3D>(node->get_child(i)), out);
+    }
+}
+
 }  // namespace
 
 void PartAssembler::_bind_methods() {
@@ -93,9 +110,7 @@ Node3D *PartAssembler::assemble(const Ref<AssemblyBlueprint> &blueprint) {
     part_id_by_attach_id["root"] = root_part->get_part_id();
 
     std::vector<MeshInstance3D *> mesh_instances;
-    if (MeshInstance3D *root_mesh = Object::cast_to<MeshInstance3D>(root_node)) {
-        mesh_instances.push_back(root_mesh);
-    }
+    collect_mesh_instances(root_node, mesh_instances);
 
     Array attachments = blueprint->get_attachments();
     std::vector<int> remaining;
@@ -152,9 +167,7 @@ Node3D *PartAssembler::assemble(const Ref<AssemblyBlueprint> &blueprint) {
             parent_it->second->add_child(child_node);
             child_node->set_transform(Transform3D(Basis::from_euler(rot_rad), pos));
 
-            if (MeshInstance3D *child_mesh = Object::cast_to<MeshInstance3D>(child_node)) {
-                mesh_instances.push_back(child_mesh);
-            }
+            collect_mesh_instances(child_node, mesh_instances);
 
             node_by_attach_id[to_std(attach_id)] = child_node;
             part_id_by_attach_id[to_std(attach_id)] = part_id;
@@ -186,6 +199,13 @@ Node3D *PartAssembler::assemble(const Ref<AssemblyBlueprint> &blueprint) {
         Ref<StandardMaterial3D> material;
         material.instantiate();
         material->set_texture(BaseMaterial3D::TEXTURE_ALBEDO, texture);
+        // Composite shapes (e.g. PartDefinition::build_winged_fuselage's
+        // hand-built delta-wing ArrayMesh) don't need backface culling to
+        // look right and a single wrong winding on one of those hand-derived
+        // triangles would otherwise punch an invisible hole in it -- safer
+        // to disable culling for the whole shared skin material than to
+        // hand-verify winding on every custom face.
+        material->set_cull_mode(BaseMaterial3D::CULL_DISABLED);
 
         for (MeshInstance3D *mesh_instance : mesh_instances) {
             mesh_instance->set_material_override(material);
