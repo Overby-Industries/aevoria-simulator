@@ -1,29 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getStripe } from "@/lib/stripe/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-// TEMPORARY admin gate — checks the caller's own authenticated email
-// against a single hardcoded address. This is a placeholder for a real
-// roles/permissions system and should not be treated as a durable access
-// control model; it's here only so review has *some* gate before the
-// marketplace has real moderators.
-const ADMIN_EMAIL = "founder@overbyindustries.space";
-
-async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || user.email !== ADMIN_EMAIL) {
-    redirect("/");
-  }
-  return user;
-}
+import { requireAdmin } from "@/lib/admin";
 
 export async function approveSkin(formData: FormData) {
   await requireAdmin();
@@ -67,6 +47,7 @@ export async function approveSkin(formData: FormData) {
     .eq("id", skinId);
 
   revalidatePath("/admin/review");
+  revalidatePath("/marketplace");
 }
 
 export async function rejectSkin(formData: FormData) {
@@ -77,4 +58,5 @@ export async function rejectSkin(formData: FormData) {
   await admin.from("skins").update({ status: "rejected" }).eq("id", skinId);
 
   revalidatePath("/admin/review");
+  revalidatePath("/marketplace");
 }

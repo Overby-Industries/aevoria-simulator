@@ -2,3 +2,7 @@
 	path = godot-cpp
 	url = https://github.com/godotengine/godot-cpp.git
 	branch = 4.5
+[submodule "cur"]
+	path = cur
+	url = https://github.com/Overby-Industries/code-of-universe-regulations.git
+	branch = dev

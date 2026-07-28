@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { uploadSkin } from "./actions";
@@ -36,7 +37,8 @@ export default async function CreatorUploadPage({
       >
         <h1 style={styles.heading}>Upload a skin</h1>
         <p style={styles.text}>
-          Submitted skins go to review before appearing in the marketplace.
+          Submitted skins go to review before appearing in the marketplace. Don't have a
+          file? <Link href="/creator/create" style={styles.link}>Design one procedurally</Link> instead.
         </p>
         {params.error && <p style={styles.error}>{params.error}</p>}
         {params.submitted && (
@@ -139,6 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   text: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
+  link: { color: "#8db0e0" },
   error: { color: "#e2786b", fontSize: "0.85rem", margin: 0 },
   success: { color: "#69c096", fontSize: "0.85rem", margin: 0 },
 };

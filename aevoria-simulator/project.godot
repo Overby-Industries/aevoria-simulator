@@ -11,9 +11,15 @@ config_version=5
 [application]
 
 config/name="Aevoria Simulator"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/LevelSelect.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+ThemeBootstrap="*res://scripts/theme_bootstrap.gd"
+AevoriaAuth="*res://scripts/aevoria_auth.gd"
+LevelContext="*res://scripts/level_context.gd"
 
 [physics]
 

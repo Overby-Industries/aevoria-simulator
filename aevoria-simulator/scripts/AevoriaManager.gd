@@ -8,3 +8,16 @@ extends Node
 
 func _ready():
     print("All C++ GDExtension classes loaded successfully.")
+    _build_back_button()
+
+func _build_back_button():
+    var canvas = CanvasLayer.new()
+    add_child(canvas)
+
+    var button = Button.new()
+    button.text = "Back to Level Select"
+    button.theme = ThemeBootstrap.theme
+    button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    button.position = Vector2(20, 620)
+    button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
+    canvas.add_child(button)

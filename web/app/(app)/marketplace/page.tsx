@@ -8,20 +8,24 @@ export default async function MarketplacePage() {
 
   const { data: skins } = await supabase
     .from("skins")
-    .select("id, title, description, price_cents, storage_path, creator_id, profiles(username)")
+    .select("id, title, description, price_cents, storage_path, preview_image_path, creator_id, profiles(username)")
     .eq("status", "approved")
     .order("created_at", { ascending: false });
 
   const items = await Promise.all(
     (skins ?? []).map(async (skin) => {
-      const isImage = IMAGE_EXTENSIONS.some((ext) =>
-        skin.storage_path.toLowerCase().endsWith(ext)
-      );
+      // Procedural skins have no storage_path at all (see 0005_skin_recipes.sql)
+      // — their only image is the rendered preview snapshot.
+      const isImage =
+        !!skin.storage_path &&
+        IMAGE_EXTENSIONS.some((ext) => skin.storage_path!.toLowerCase().endsWith(ext));
+      const previewPath = isImage ? skin.storage_path! : skin.preview_image_path;
+
       let previewUrl: string | null = null;
-      if (isImage) {
+      if (previewPath) {
         const { data } = await supabase.storage
           .from("skins")
-          .createSignedUrl(skin.storage_path, 60 * 10); // 10 minutes
+          .createSignedUrl(previewPath, 60 * 10); // 10 minutes
         previewUrl = data?.signedUrl ?? null;
       }
       return { ...skin, previewUrl };

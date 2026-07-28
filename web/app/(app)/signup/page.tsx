@@ -1,4 +1,5 @@
 import { signup } from "@/app/auth/actions";
+import { FactionSelector } from "@/components/FactionSelector";
 
 export default async function SignupPage({
   searchParams,
@@ -48,6 +49,8 @@ export default async function SignupPage({
           />
         </label>
 
+        <FactionSelector />
+
         <button style={styles.button} type="submit">
           Sign up
         </button>
@@ -73,7 +76,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   card: {
     width: "100%",
-    maxWidth: "360px",
+    maxWidth: "420px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",

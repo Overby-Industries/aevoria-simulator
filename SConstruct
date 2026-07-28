@@ -9,10 +9,16 @@ env.Append(CPPPATH=[
     "core",
     "godot-cpp/include",
     "godot-cpp/include/godot_cpp",
+    "cur/include",
 ])
 
+# libcur (the CUR submodule) returns its own source node list rather than
+# being Globbed directly, per cur/docs/cur-library-api.md section 2 — it
+# builds with this project's flags rather than shipping a prebuilt lib.
+cur_sources = SConscript("cur/SConscript", exports="env")
+
 # Add your source files
-sources = Glob("src/*.cpp") + Glob("core/*.cpp")
+sources = Glob("src/*.cpp") + Glob("core/*.cpp") + cur_sources
 
 # Output directory inside the actual Godot project. Resolved relative to this
 # SConstruct file's own directory (Dir("#")) rather than the caller's cwd, so
