@@ -24,7 +24,7 @@ var _socket_list: ItemList
 var _palette_vbox: VBoxContainer
 var _stats_label: Label
 var _status_label: Label
-var _hull_button: Button
+var _hulls_vbox: VBoxContainer
 var _habitat_button: Button
 var _finish_button: Button
 var _skins_vbox: VBoxContainer
@@ -51,10 +51,16 @@ func _start_new_blueprint(root_part_id: String, ship_id: String):
 	_blueprint.ship_id = ship_id
 	_blueprint.root_part_id = root_part_id
 	_blueprint.attachments = []
-	_blueprint.skin_recipe = {
+	# Faction-exclusive hulls get their sketched look (e.g. the SSTO's
+	# white) as a starting suggestion; anything else falls back to the
+	# original generic skin. Player can still Random Skin over it.
+	var suggested = PartCatalog.HULL_SKIN_SUGGESTIONS.get(root_part_id)
+	_blueprint.skin_recipe = suggested.duplicate() if suggested != null else {
 		"seed": randi() % 100000, "frequency": 0.08,
 		"dark_color": "#26201a", "base_color": "#8a8f96", "highlight_color": "#c7ccd1",
 	}
+	if suggested != null:
+		_blueprint.skin_recipe["seed"] = randi() % 100000
 	_selected_socket_index = -1
 	_status_label.text = ""
 	_refresh_all()
@@ -138,16 +144,19 @@ func _build_ui():
 	header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
 	outer.add_child(header)
 
-	var new_row = HBoxContainer.new()
-	outer.add_child(new_row)
-	_hull_button = Button.new()
-	_hull_button.text = "New Ship"
-	_hull_button.pressed.connect(func(): _start_new_blueprint("hull_mk1", "MyShip"))
-	new_row.add_child(_hull_button)
+	var hulls_header = Label.new()
+	hulls_header.text = "NEW SHIP -- HULLS AVAILABLE TO YOUR FACTION"
+	hulls_header.add_theme_font_size_override("font_size", 12)
+	outer.add_child(hulls_header)
+
+	_hulls_vbox = VBoxContainer.new()
+	outer.add_child(_hulls_vbox)
+	_refresh_hull_picker_ui()
+
 	_habitat_button = Button.new()
 	_habitat_button.text = "New Habitat"
 	_habitat_button.pressed.connect(func(): _start_new_blueprint("habitat_ring_mk1", "MyHabitat"))
-	new_row.add_child(_habitat_button)
+	outer.add_child(_habitat_button)
 
 	outer.add_child(HSeparator.new())
 
@@ -259,6 +268,25 @@ func _refresh_socket_list_ui():
 	if _selected_socket_index >= 0 and _selected_socket_index < _open_sockets.size():
 		_socket_list.select(_selected_socket_index)
 
+func _part_available_to_current_faction(part: PartDefinition) -> bool:
+	var faction_id: String = part.faction_id
+	return faction_id.is_empty() or faction_id == LevelContext.current_faction_id
+
+func _refresh_hull_picker_ui():
+	for child in _hulls_vbox.get_children():
+		child.queue_free()
+
+	for part in _catalog:
+		if part.category != PartDefinition.CAT_HULL_SEGMENT:
+			continue
+		if not _part_available_to_current_faction(part):
+			continue
+		var button = Button.new()
+		button.text = part.display_name
+		var part_id = part.part_id
+		button.pressed.connect(func(): _start_new_blueprint(part_id, "MyShip"))
+		_hulls_vbox.add_child(button)
+
 func _refresh_palette_ui():
 	for child in _palette_vbox.get_children():
 		child.queue_free()
@@ -268,7 +296,7 @@ func _refresh_palette_ui():
 
 	for part in _catalog:
 		var bit = 1 << int(part.category)
-		var fits = has_selection and (bit & accepts_mask) != 0
+		var fits = has_selection and (bit & accepts_mask) != 0 and _part_available_to_current_faction(part)
 		var button = Button.new()
 		button.text = part.display_name
 		button.disabled = not fits

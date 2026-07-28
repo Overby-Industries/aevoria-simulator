@@ -12,6 +12,13 @@ enum Kind { EXTRACTION, GOVERNANCE, PRODUCTION }
 
 const AEVORIA_COMMONWEALTH = "aevoria_commonwealth"
 
+# The other two factions from the user's sketch -- no levels or home bases
+# of their own yet (that's the later "spheres of influence" pass), but
+# part_catalog.gd's faction-exclusive hulls need canonical ids to gate
+# against now, and this is the single place faction ids are defined.
+const OLIGARCH_COMBINE = "oligarch_combine"
+const NOMAD_FLOTILLA = "nomad_flotilla"
+
 static func build_levels() -> Array:
 	return [
 		{

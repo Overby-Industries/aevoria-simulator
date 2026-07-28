@@ -32,6 +32,13 @@ private:
     String display_name;
     int category = PART_CAT_HULL_SEGMENT;
 
+    // Empty (the default) means available to every faction. Non-empty
+    // restricts this part to one faction id (matched against
+    // LevelContext.current_faction_id on the GDScript side -- this class
+    // stays a plain data holder and does no gating itself, same division
+    // of responsibility as everywhere else in this pipeline).
+    String faction_id;
+
     // {"shape": "box"|"cylinder"|"capsule", "size": Vector3, "radius": float, "height": float}
     Dictionary mesh_recipe;
 
@@ -60,6 +67,9 @@ public:
 
     void set_category(int p_category);
     int get_category() const;
+
+    void set_faction_id(const String &p_faction_id);
+    String get_faction_id() const;
 
     void set_mesh_recipe(const Dictionary &p_recipe);
     Dictionary get_mesh_recipe() const;

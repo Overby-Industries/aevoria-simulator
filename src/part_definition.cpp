@@ -15,6 +15,8 @@ void PartDefinition::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_display_name"), &PartDefinition::get_display_name);
     ClassDB::bind_method(D_METHOD("set_category", "category"), &PartDefinition::set_category);
     ClassDB::bind_method(D_METHOD("get_category"), &PartDefinition::get_category);
+    ClassDB::bind_method(D_METHOD("set_faction_id", "faction_id"), &PartDefinition::set_faction_id);
+    ClassDB::bind_method(D_METHOD("get_faction_id"), &PartDefinition::get_faction_id);
     ClassDB::bind_method(D_METHOD("set_mesh_recipe", "recipe"), &PartDefinition::set_mesh_recipe);
     ClassDB::bind_method(D_METHOD("get_mesh_recipe"), &PartDefinition::get_mesh_recipe);
     ClassDB::bind_method(D_METHOD("set_sockets", "sockets"), &PartDefinition::set_sockets);
@@ -29,6 +31,7 @@ void PartDefinition::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "part_id"), "set_part_id", "get_part_id");
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "display_name"), "set_display_name", "get_display_name");
     ADD_PROPERTY(PropertyInfo(Variant::INT, "category"), "set_category", "get_category");
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "faction_id"), "set_faction_id", "get_faction_id");
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "mesh_recipe"), "set_mesh_recipe", "get_mesh_recipe");
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "sockets"), "set_sockets", "get_sockets");
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "stats"), "set_stats", "get_stats");
@@ -65,6 +68,9 @@ String PartDefinition::get_display_name() const { return display_name; }
 
 void PartDefinition::set_category(int p_category) { category = p_category; }
 int PartDefinition::get_category() const { return category; }
+
+void PartDefinition::set_faction_id(const String &p_faction_id) { faction_id = p_faction_id; }
+String PartDefinition::get_faction_id() const { return faction_id; }
 
 void PartDefinition::set_mesh_recipe(const Dictionary &p_recipe) { mesh_recipe = p_recipe; }
 Dictionary PartDefinition::get_mesh_recipe() const { return mesh_recipe; }
