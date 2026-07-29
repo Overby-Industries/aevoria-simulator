@@ -32,11 +32,17 @@ func _build_ui():
 	_panel = PanelContainer.new()
 	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(280, 0)
-	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	# Docked bottom-right -- computed from the viewport rather than a fixed
-	# literal since this panel's height grows with the skins list.
-	var viewport_size = get_viewport().get_visible_rect().size
-	_panel.position = Vector2(viewport_size.x - 300, viewport_size.y - 340)
+	# A real anchor (not a one-off position computed from today's window
+	# size) -- PRESET_MODE_MINSIZE keeps the panel pinned to the
+	# bottom-right corner, 20px in, and Godot recomputes that on every
+	# resize automatically, including toggling fullscreen.
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	# The preset alone leaves grow direction at its default (END, i.e.
+	# grows further right/down) -- for a bottom-right-docked panel that
+	# grows the minimum-size rect off the edge of the screen instead of
+	# up-and-left from the anchor. Force it explicitly.
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(_panel)
 
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))

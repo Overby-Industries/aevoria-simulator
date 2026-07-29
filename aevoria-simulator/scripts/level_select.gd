@@ -67,9 +67,15 @@ func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
 	panel.custom_minimum_size = Vector2(280, 0)
-	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	var viewport_size = canvas.get_viewport().get_visible_rect().size
-	panel.position = Vector2(viewport_size.x - 300, 20)
+	# Real corner anchor (see account_panel.gd's matching comment) so this
+	# follows the window on resize/fullscreen instead of staying put at
+	# wherever the window happened to be sized at launch.
+	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	# The preset alone leaves grow_horizontal at its default (END, i.e.
+	# grows further right) -- for a right-docked panel that grows the
+	# minimum-size rect off the edge of the screen instead of leftward
+	# from the anchor. Force it explicitly.
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	canvas.add_child(panel)
 
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))
