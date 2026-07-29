@@ -60,6 +60,11 @@ func _build_ui() -> void:
 	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
 	outer.add_child(sandbox_button)
 
+	var exit_button = Button.new()
+	exit_button.text = "Exit Game"
+	exit_button.pressed.connect(func(): get_tree().quit())
+	outer.add_child(exit_button)
+
 func _format_resources(resources: Dictionary) -> String:
 	if resources.is_empty():
 		return "Commons: (nothing banked yet)"

@@ -77,10 +77,20 @@ func _build_ui():
 	_account_label.add_theme_font_size_override("font_size", 12)
 	_logged_in_box.add_child(_account_label)
 
+	var skins_header_row = HBoxContainer.new()
+	_logged_in_box.add_child(skins_header_row)
+
 	var skins_header = Label.new()
 	skins_header.text = "MY SKINS"
 	skins_header.add_theme_font_size_override("font_size", 12)
-	_logged_in_box.add_child(skins_header)
+	skins_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	skins_header_row.add_child(skins_header)
+
+	var refresh_button = Button.new()
+	refresh_button.text = "Refresh"
+	refresh_button.add_theme_font_size_override("font_size", 10)
+	refresh_button.pressed.connect(func(): AevoriaAuth.fetch_owned_skins())
+	skins_header_row.add_child(refresh_button)
 
 	var skins_scroll = ScrollContainer.new()
 	skins_scroll.custom_minimum_size = Vector2(0, 100)

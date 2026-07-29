@@ -9,10 +9,23 @@ extends Node
 ## SUPABASE_URL/ANON_KEY are the same public-safe values already shipped in
 ## the web app's client-side bundle -- protected by RLS, not secrecy, same
 ## security model as any other Supabase client (web, mobile, or this).
+##
+## Debug builds (editor play, template_debug) default to the dev/test
+## Supabase project -- same one the web app's Preview deployments use --
+## so local testing never touches real player accounts or live purchases.
+## The itch.io release build is always template_release, never a debug
+## build, so players always get production with no flag needed. Pass
+## "--prod-backend" to a debug build to force production instead (e.g. to
+## reproduce a live-only bug) without doing a full release export.
 
-const SUPABASE_URL = "https://hpskqefglvjmdegkptfl.supabase.co"
-const SUPABASE_ANON_KEY = "sb_publishable_axQ9YhS3uCmq8oJw0-jbnw_I0G3B3ai"
-const SESSION_PATH = "user://session.cfg"
+const PROD_SUPABASE_URL = "https://hpskqefglvjmdegkptfl.supabase.co"
+const PROD_SUPABASE_ANON_KEY = "sb_publishable_axQ9YhS3uCmq8oJw0-jbnw_I0G3B3ai"
+const DEV_SUPABASE_URL = "https://beacfrhrumsegqtxkqlr.supabase.co"
+const DEV_SUPABASE_ANON_KEY = "sb_publishable_NIKvNVr0cy8ymdHT9nOk9A_AkNZZj9s"
+
+var SUPABASE_URL: String
+var SUPABASE_ANON_KEY: String
+var SESSION_PATH: String
 
 signal login_succeeded(user_info: Dictionary)
 signal login_failed(message: String)
@@ -30,6 +43,8 @@ var _refresh_request: HTTPRequest
 var _skins_request: HTTPRequest
 
 func _ready():
+	_resolve_backend()
+
 	_login_request = HTTPRequest.new()
 	add_child(_login_request)
 	_login_request.request_completed.connect(_on_login_response)
@@ -43,6 +58,20 @@ func _ready():
 	_skins_request.request_completed.connect(_on_skins_response)
 
 	_load_session()
+
+func _resolve_backend():
+	var use_prod = not OS.is_debug_build() or "--prod-backend" in OS.get_cmdline_args()
+	if use_prod:
+		SUPABASE_URL = PROD_SUPABASE_URL
+		SUPABASE_ANON_KEY = PROD_SUPABASE_ANON_KEY
+		SESSION_PATH = "user://session.cfg"
+	else:
+		SUPABASE_URL = DEV_SUPABASE_URL
+		SUPABASE_ANON_KEY = DEV_SUPABASE_ANON_KEY
+		# Separate session file so a dev-project login (a different
+		# auth.users table entirely) never collides with a saved
+		# production session on the same machine.
+		SESSION_PATH = "user://session_dev.cfg"
 
 func is_logged_in() -> bool:
 	return access_token != ""
