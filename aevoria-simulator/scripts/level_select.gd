@@ -11,11 +11,17 @@ extends Node
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const GlassPanel = preload("res://scripts/glass_panel.gd")
+const FoundersMonument = preload("res://scripts/founders_monument.gd")
 
 var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
+var _founders_monument: CanvasLayer
 
 func _ready() -> void:
 	_build_ui()
+	# Shown automatically on the game's front door (see founders_monument.gd);
+	# the "Admire" button below reopens it any time after this first look.
+	_founders_monument = FoundersMonument.new()
+	add_child(_founders_monument)
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -60,6 +66,11 @@ func _build_ui() -> void:
 	sandbox_button.text = "Open Sandbox / Dev Demos"
 	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
 	outer.add_child(sandbox_button)
+
+	var monument_button = Button.new()
+	monument_button.text = "Admire the Founders Monument"
+	monument_button.pressed.connect(func(): _founders_monument.show_monument())
+	outer.add_child(monument_button)
 
 	_build_resources_panel(canvas, state)
 
