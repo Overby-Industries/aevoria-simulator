@@ -34,7 +34,7 @@ const PRODUCTS = [
   {
     name: 'The Syndicate "Shadow Broker" Stealth Pack',
     description:
-      "For the Fringe Nomad or Oligarch Franchise account. Includes matte-black radar-absorbent hull textures, crimson warning lights, and a \"smuggler's cache\" UI theme.",
+      "For the Fringe Nomad or Oligarch Franchise account. Includes matte-black radar-absorbent hull textures and crimson warning lights.",
     priceCents: 499,
   },
   {
