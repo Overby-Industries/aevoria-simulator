@@ -50,21 +50,31 @@ nose cone + a mirrored pair of swept delta wings, all in one composite part.
 ```gdscript
 {
     "shape": "winged_fuselage",
-    "radius": 0.55,             # body radius
-    "height": 3.6,              # body length (the capsule's long axis is Y)
-    "nose_length": 0.8,         # how far the nose cone extends past the body
-    "nose_tip_radius": 0.04,    # ~0 = sharp point; bigger = a blunter nose
-    "wing_span": 1.8,           # how far each wing extends from the centerline
-    "wing_root_chord": 1.7,     # length of the wing where it meets the fuselage
-    "wing_tip_sweep": 1.5,      # how far back the wingtip is swept vs. the root
-    "wing_thickness": 0.1,      # wing thickness (keep this small -- it's a wedge, not a slab)
-    "wing_y_offset": -0.3,      # where along the body the wings attach (0 = center, negative = toward the tail)
+    "radius": 2.7,              # body radius (meters)
+    "height": 36.58,            # body length -- 120ft, the capsule's long axis is Y
+    "nose_length": 4.5,         # how far the nose cone extends past the body
+    "nose_tip_radius": 0.15,    # ~0 = sharp point; bigger = a blunter nose
+    "wing_span": 15.24,         # how far each wing extends from the centerline -- half of the 100ft total wingspan
+    "wing_root_chord": 12.0,    # length of the wing where it meets the fuselage
+    "wing_tip_sweep": 12.7,     # how far back the wingtip is swept vs. the root
+    "wing_thickness": 0.6,      # wing thickness (keep this small relative to chord -- it's a wedge, not a slab)
+    "wing_y_offset": -3.05,     # where along the body the wings attach (0 = center, negative = toward the tail)
 }
 ```
 All nine keys are plain floats — this is the one to reach for if you want to
 change the SSTO's proportions yourself (`ssto_hull_helga` in
 `part_catalog.gd`). **No rebuild needed** — this whole shape is driven by
 data, even though the shape-*builder* itself is C++.
+
+**Scale convention: 1 Godot unit = 1 meter.** Every hull and accessory in
+`part_catalog.gd` is sized to real-world aerospace proportions (Helga's
+36.58m/30.48m fuselage/wingspan above is the anchor the rest of the catalog
+is sized against). If you add a new part, size it in meters consistently
+with the rest of the catalog rather than picking an arbitrary small number
+— and if it's a root hull meant to carry other parts, remember the camera
+in `assembly_bay.gd`/`parts-demo.gd` auto-frames on the assembled ship's
+actual bounding box (`camera_framing.gd`), so an unrealistically large or
+tiny part will visibly throw off the framing rather than silently working.
 
 ### Where the actual ship definitions live
 
