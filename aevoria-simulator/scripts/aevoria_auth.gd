@@ -181,7 +181,7 @@ func fetch_owned_skins():
 	# RLS on `purchases` ("Buyers can view their own purchases") already
 	# scopes this to the caller -- no manual buyer_id filter needed, same as
 	# the web app never needs one either.
-	var url = "%s/rest/v1/purchases?select=amount_cents,created_at,skins(id,title,description,recipe,preview_image_path,storage_path)" % SUPABASE_URL
+	var url = "%s/rest/v1/purchases?select=amount_cents,created_at,product_name,skins(id,title,description,recipe,preview_image_path,storage_path)" % SUPABASE_URL
 	var headers = [
 		"apikey: %s" % SUPABASE_ANON_KEY,
 		"Authorization: Bearer %s" % access_token,
