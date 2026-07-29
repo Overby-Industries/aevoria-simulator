@@ -164,10 +164,81 @@ func _on_skins_fetched(purchases: Array):
 		var skin = purchase.get("skins", {})
 		if skin == null:
 			skin = {}
+
+		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_skins_vbox.add_child(row)
+
+		var thumb = TextureRect.new()
+		thumb.custom_minimum_size = Vector2(20, 20)
+		thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		thumb.stretch_mode = TextureRect.STRETCH_SCALE
+		row.add_child(thumb)
+
 		var label = Label.new()
 		label.text = "- %s" % skin.get("title", "(store item)")
 		label.add_theme_font_size_override("font_size", 11)
-		_skins_vbox.add_child(label)
+		row.add_child(label)
+
+		# Procedural skins have no storage_path (see 0005_skin_recipes.sql
+		# in web/supabase/migrations) -- preview_image_path is their only
+		# image. An uploaded file skin's own storage_path is used only if
+		# it's actually an image (could be a non-image 3D asset instead),
+		# matching the exact same fallback the web marketplace page uses.
+		var image_extensions = [".png", ".jpg", ".jpeg", ".webp"]
+		var storage_path = skin.get("storage_path")
+		var is_image = storage_path != null and image_extensions.any(
+			func(ext): return storage_path.to_lower().ends_with(ext)
+		)
+		var preview_path = storage_path if is_image else skin.get("preview_image_path")
+		if preview_path != null:
+			_load_skin_thumbnail(thumb, preview_path)
 
 func _on_skins_fetch_failed(message: String):
 	_status_label.text = message
+
+# The "skins" storage bucket is private (see 0001_init.sql), so a plain
+# public URL won't work -- has to go through Supabase's sign endpoint
+# first, same as web/app/(app)/marketplace/page.tsx does server-side.
+# Each thumbnail gets its own throwaway HTTPRequest pair (sign, then
+# download) since several can be in flight at once for a longer skins list.
+func _load_skin_thumbnail(thumb: TextureRect, path: String) -> void:
+	var sign_request = HTTPRequest.new()
+	add_child(sign_request)
+	var sign_url = "%s/storage/v1/object/sign/skins/%s" % [AevoriaAuth.SUPABASE_URL, path]
+	var headers = [
+		"apikey: %s" % AevoriaAuth.SUPABASE_ANON_KEY,
+		"Authorization: Bearer %s" % AevoriaAuth.access_token,
+		"Content-Type: application/json",
+	]
+	var body = JSON.stringify({"expiresIn": 600})
+	sign_request.request_completed.connect(func(_result, response_code, _resp_headers, resp_body):
+		sign_request.queue_free()
+		if response_code != 200:
+			return
+		var data = JSON.parse_string(resp_body.get_string_from_utf8())
+		if not (data is Dictionary) or not data.has("signedURL"):
+			return
+		_download_skin_thumbnail(thumb, "%s/storage/v1%s" % [AevoriaAuth.SUPABASE_URL, data["signedURL"]])
+	)
+	sign_request.request(sign_url, headers, HTTPClient.METHOD_POST, body)
+
+func _download_skin_thumbnail(thumb: TextureRect, image_url: String) -> void:
+	var image_request = HTTPRequest.new()
+	add_child(image_request)
+	image_request.request_completed.connect(func(_result, response_code, _resp_headers, image_bytes):
+		image_request.queue_free()
+		if response_code != 200:
+			return
+		var image = Image.new()
+		# Try each format in turn -- the response has no reliable
+		# extension to key off (it's a signed URL, not a file path).
+		var loaded = (
+			image.load_png_from_buffer(image_bytes) == OK
+			or image.load_jpg_from_buffer(image_bytes) == OK
+			or image.load_webp_from_buffer(image_bytes) == OK
+		)
+		if loaded:
+			thumb.texture = ImageTexture.create_from_image(image)
+	)
+	image_request.request(image_url, [], HTTPClient.METHOD_GET)
