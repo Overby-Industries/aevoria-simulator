@@ -4,11 +4,14 @@
 #include "part_definition.h"
 #include "procedural_art_generator.h"
 
+#include <godot_cpp/classes/image.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/core/math.hpp>
 #include <godot_cpp/variant/basis.hpp>
+#include <godot_cpp/variant/rect2i.hpp>
 #include <godot_cpp/variant/transform3d.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
+#include <godot_cpp/variant/vector2i.hpp>
 
 using namespace godot;
 
@@ -195,6 +198,30 @@ Node3D *PartAssembler::assemble(const Ref<AssemblyBlueprint> &blueprint) {
         Ref<ProceduralArtGenerator> generator;
         generator.instantiate();
         Ref<ImageTexture> texture = generator->generate_procedural_texture(texture_recipe, 256, 256);
+
+        // Optional badge/logo composited on top of the procedural pattern --
+        // a separate reward from the skin_recipe colors (e.g. the Founding
+        // Citizen bundle's commemorative badge), so it layers onto whatever
+        // pattern is already selected rather than replacing it.
+        String decal_path = blueprint->get_decal_path();
+        if (!decal_path.is_empty()) {
+            Ref<Image> decal;
+            decal.instantiate();
+            if (decal->load(decal_path) == OK) {
+                Ref<Image> base_image = texture->get_image();
+                if (base_image.is_valid()) {
+                    Vector2i decal_size = decal->get_size();
+                    Vector2i base_size = base_image->get_size();
+                    Vector2i dst(base_size.x - decal_size.x - 8, base_size.y - decal_size.y - 8);
+                    dst.x = dst.x > 0 ? dst.x : 0;
+                    dst.y = dst.y > 0 ? dst.y : 0;
+                    base_image->blend_rect(decal, Rect2i(Vector2i(0, 0), decal_size), dst);
+                    texture = ImageTexture::create_from_image(base_image);
+                }
+            } else {
+                UtilityFunctions::push_warning("PartAssembler::assemble: could not load decal at '", decal_path, "'.");
+            }
+        }
 
         Ref<StandardMaterial3D> material;
         material.instantiate();
