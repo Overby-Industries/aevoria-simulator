@@ -151,9 +151,14 @@ func _on_skins_fetched(purchases: Array):
 		_skins_vbox.add_child(empty_label)
 		return
 	for purchase in purchases:
+		# A Tier 1 (first-party store) purchase has no skin_id, so the
+		# embedded "skins" join comes back as an explicit JSON null rather
+		# than a missing key -- .get()'s default only covers the latter.
 		var skin = purchase.get("skins", {})
+		if skin == null:
+			skin = {}
 		var label = Label.new()
-		label.text = "- %s" % skin.get("title", "(untitled)")
+		label.text = "- %s" % skin.get("title", "(store item)")
 		label.add_theme_font_size_override("font_size", 11)
 		_skins_vbox.add_child(label)
 
