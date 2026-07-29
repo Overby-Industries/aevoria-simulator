@@ -3,7 +3,10 @@ extends CanvasLayer
 ## Logs the player into the same Commonwealth account they use on the web
 ## marketplace (via the AevoriaAuth autoload) and shows what they own --
 ## closing the loop between buying a skin on the web and actually having
-## it here. Built in code, matching cur_fsm_display.gd's pattern.
+## it here. Built in code, matching cur_fsm_display.gd's pattern. Docked to
+## the bottom-right of the screen; the game's Exit button lives here too.
+
+const GlassPanel = preload("res://scripts/glass_panel.gd")
 
 var _panel: PanelContainer
 var _logged_out_box: VBoxContainer
@@ -30,10 +33,13 @@ func _build_ui():
 	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(280, 0)
 	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_panel.position = Vector2(20, 240)
+	# Docked bottom-right -- computed from the viewport rather than a fixed
+	# literal since this panel's height grows with the skins list.
+	var viewport_size = get_viewport().get_visible_rect().size
+	_panel.position = Vector2(viewport_size.x - 300, viewport_size.y - 340)
 	add_child(_panel)
 
-	var bg = _make_glass_background(Color(0.05, 0.08, 0.15, 0.45))
+	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))
 	_panel.add_child(bg)
 
 	var outer = VBoxContainer.new()
@@ -104,18 +110,13 @@ func _build_ui():
 	logout_button.pressed.connect(AevoriaAuth.logout)
 	_logged_in_box.add_child(logout_button)
 
-func _make_glass_background(tint: Color) -> ColorRect:
-	var bg = ColorRect.new()
-	bg.color = Color(1, 1, 1, 1)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var shader: Shader = load("res://shaders/frosted_glass_panel.gdshader")
-	var mat = ShaderMaterial.new()
-	mat.shader = shader
-	mat.set_shader_parameter("blur_amount", 2.0)
-	mat.set_shader_parameter("tint_color", tint)
-	bg.material = mat
-	return bg
+	# Outside both boxes so it's visible whether or not the player is
+	# logged in -- exiting the game shouldn't require an account.
+	outer.add_child(HSeparator.new())
+	var exit_button = Button.new()
+	exit_button.text = "Exit Game"
+	exit_button.pressed.connect(func(): get_tree().quit())
+	outer.add_child(exit_button)
 
 func _refresh_state():
 	var logged_in = AevoriaAuth.is_logged_in()
