@@ -7,6 +7,7 @@ extends Node
 # tie-in the civil-engineering direction calls for, not just a visual toy.
 
 const PartCatalog = preload("res://scripts/part_catalog.gd")
+const CameraFraming = preload("res://scripts/camera_framing.gd")
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var resource_commons: ResourceCommons = $ResourceCommons
@@ -17,20 +18,21 @@ func _ready():
 	assembler.part_library = catalog
 
 	var ship := _build_ship(assembler)
-	ship.position = Vector3(-3, 0, 0)
+	ship.position = Vector3(-16, 0, 0)
 	add_child(ship)
 	print("[PartsDemo] Assembled ship '", ship.name, "' with ", ship.get_child_count(), " attached parts.")
 
 	var habitat := _build_habitat(assembler)
-	habitat.position = Vector3(3, 0, 0)
+	habitat.position = Vector3(16, 0, 0)
 	add_child(habitat)
 	print("[PartsDemo] Assembled habitat '", habitat.name, "' with ", habitat.get_child_count(), " attached parts.")
 
 	# Frame both assembled objects regardless of the camera's starting
-	# transform in the .tscn -- guarantees they're actually on-screen
-	# instead of relying on hand-picked numbers being exactly right.
+	# transform in the .tscn, or their real-world-scale size -- guarantees
+	# they're actually on-screen instead of relying on hand-picked numbers
+	# being exactly right.
 	camera.make_current()
-	camera.look_at((ship.position + habitat.position) * 0.5, Vector3.UP)
+	CameraFraming.frame(camera, [ship, habitat])
 
 func _build_ship(p_assembler: PartAssembler) -> Node3D:
 	var blueprint := AssemblyBlueprint.new()

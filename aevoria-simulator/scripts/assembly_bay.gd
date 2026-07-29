@@ -8,6 +8,7 @@ extends Node3D
 ## needing any incremental attach/detach API on the C++ side.
 
 const PartCatalog = preload("res://scripts/part_catalog.gd")
+const CameraFraming = preload("res://scripts/camera_framing.gd")
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var camera: Camera3D = $Camera3D
@@ -106,7 +107,7 @@ func _rebuild_preview():
 	_preview_node = assembler.assemble(_blueprint)
 	add_child(_preview_node)
 	camera.make_current()
-	camera.look_at(_preview_node.global_position, Vector3.UP)
+	CameraFraming.frame(camera, [_preview_node])
 
 # --- UI construction (built in code, matching cur_fsm_display.gd's pattern) -
 
