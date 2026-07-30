@@ -175,7 +175,16 @@ forget this last step (players still get whatever the last deploy shipped).
    ```
    This exports a fresh "Windows Desktop" release build via Godot's headless
    `--export-release`, then pushes it to the `windows` channel via
-   `butler push`.
+   `butler push`. It then reads back the build number butler just assigned
+   (the same number shown on the public itch.io page) and stamps it as
+   `1.0.<N>` across the repo -- the README badge, `CONTRIBUTORS.md`,
+   `web/package.json`/`package-lock.json`, and the exported .exe's Windows
+   file-version metadata in `export_presets.cfg` -- via `sync_version.ps1`
+   at the repo root. This is what keeps "the version" meaning one specific
+   number everywhere instead of drifting (the web app used to say `1.0.1`
+   while itch was already on build 11). You can also run
+   `powershell -File sync_version.ps1 -BuildNumber <N>` by hand if you ever
+   need to re-sync without doing a full deploy.
 3. Confirm it actually landed (don't just trust a clean exit code):
    ```powershell
    c:\Users\keefe\AppData\Local\butler\butler.exe status aevoria-simulator/aevoria-simulator-per-avia-ad-astra
