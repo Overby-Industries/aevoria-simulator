@@ -5,7 +5,10 @@ the vision/lore, see [README.md](README.md). For the deep reference on
 the procedural graphics system specifically, see
 [docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md). For why the game is
 single-player today and how community voting/multiplayer would get added
-later, see [docs/MULTIPLAYER_ROADMAP.md](docs/MULTIPLAYER_ROADMAP.md).
+later, see [docs/MULTIPLAYER_ROADMAP.md](docs/MULTIPLAYER_ROADMAP.md). For
+the Commonwealth's Vital Continuity Index (the health-meter panel on the
+front door) and what's real vs. placeholder in it today, see
+[docs/VCI_TRACKING.md](docs/VCI_TRACKING.md).
 
 ## Project layout
 
@@ -109,6 +112,16 @@ add a new level:
 4. Every level should end with a "Back to Level Select" button
    (`get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn")`) — every
    existing level has one, players have no other way back.
+
+**Known gap, deliberately deferred:** most levels are still a plain gray
+background with a camera/light and a UI panel — no real 3D scene dressing.
+The plan (as of 2026-07-29) is to flesh out VCI tracking first (see
+[docs/VCI_TRACKING.md](docs/VCI_TRACKING.md)) so there's a real objective
+system to build longer, multi-level campaigns against, and to give each
+level a proper 3D scene as part of that campaign work rather than as a
+separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd` (see
+[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s "System 4") are the
+reusable pieces this would build on when the time comes.
 5. If the level's UI panel might grow past a few items, wrap it in a
    `ScrollContainer` from the start (see any level's `_build_ui()`) — this bit
    the project twice already (`AssemblyBay`, then `LevelSelect` itself) once a

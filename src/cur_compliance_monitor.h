@@ -76,6 +76,18 @@ public:
     double get_capture_risk() const;
     int get_capture_risk_band() const;
 
+    // --- vital continuity, FOUNDATION-003 §11 / FOUNDATION-013 -------------------
+    // Unlike capture risk, the library's signature takes an entity handle
+    // (attribution for which entity's continuity failure this is, for audit/
+    // STATE-010 purposes) even though the score itself is machine-wide, not
+    // per-entity -- see cur::CURStateMachine::vital_continuity(). Callers pass
+    // whatever entity they registered to represent "the civilization" being
+    // measured (see docs/VCI_TRACKING.md).
+    double update_vital_continuity(int64_t entity_handle, const Dictionary &inputs, int64_t tick);
+    double get_vital_continuity() const;
+    int get_vital_continuity_band() const;
+    String vital_continuity_band_name(int band) const;
+
     // --- amendments, the AI contributor path -------------------------------------
     Dictionary propose_regulation_amendment(const Ref<CURGodotBridge> &regulation,
                                             const String &proposal_id,
