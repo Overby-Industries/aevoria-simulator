@@ -138,12 +138,21 @@ The Aevoria Simulator is the playable proving ground for the broader Overby Indu
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Play Now
+
+**[Download Aevoria Simulator on itch.io →](https://aevoria-simulator.itch.io/aevoria-simulator-per-avia-ad-astra)**
+
+Windows build, name-your-own-price. This is the fastest way to actually
+play — no build tools required.
+
+### Build from Source (for contributors)
+
+#### Prerequisites
 *   [Godot 4.6.3](https://godotengine.org/download/archive/4.6.3-stable/) (stable)
 *   Python 3 with SCons (`pip install scons`) — builds the GDExtension
 *   A C++17 compiler (MSVC on Windows)
 
-### Installation
+#### Installation
 ```bash
 # Clone the repository, including the godot-cpp and cur submodules
 git clone --recurse-submodules https://github.com/Overby-Industries/aevoria-simulator.git
