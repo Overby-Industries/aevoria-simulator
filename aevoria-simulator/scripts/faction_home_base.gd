@@ -11,6 +11,12 @@ extends RefCounted
 ##
 ## No class_name, matching part_catalog.gd / theme_builder.gd's
 ## preload()-only convention.
+##
+## This stays local-only on purpose even if community voting/multiplayer
+## gets built later -- it's personal ship/mining/resource progress, not
+## shared Commonwealth state. See docs/MULTIPLAYER_ROADMAP.md for what
+## *would* move to a shared Supabase backend (governance/voting) vs. what
+## wouldn't (this file).
 
 const DIR = "user://factions"
 

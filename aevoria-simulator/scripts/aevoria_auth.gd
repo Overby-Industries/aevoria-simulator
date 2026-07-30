@@ -17,6 +17,10 @@ extends Node
 ## build, so players always get production with no flag needed. Pass
 ## "--prod-backend" to a debug build to force production instead (e.g. to
 ## reproduce a live-only bug) without doing a full release export.
+##
+## This is also the seam any future community-voting/multiplayer feature
+## would build on -- SUPABASE_URL/access_token + the same HTTPRequest+signal
+## pattern fetch_owned_skins() below uses. See docs/MULTIPLAYER_ROADMAP.md.
 
 const PROD_SUPABASE_URL = "https://hpskqefglvjmdegkptfl.supabase.co"
 const PROD_SUPABASE_ANON_KEY = "sb_publishable_axQ9YhS3uCmq8oJw0-jbnw_I0G3B3ai"

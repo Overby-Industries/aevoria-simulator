@@ -3,7 +3,9 @@
 This is the practical, "how do I actually change something" guide. For
 the vision/lore, see [README.md](README.md). For the deep reference on
 the procedural graphics system specifically, see
-[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md).
+[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md). For why the game is
+single-player today and how community voting/multiplayer would get added
+later, see [docs/MULTIPLAYER_ROADMAP.md](docs/MULTIPLAYER_ROADMAP.md).
 
 ## Project layout
 
