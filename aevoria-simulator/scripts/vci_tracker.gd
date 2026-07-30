@@ -44,6 +44,8 @@ const TARGETS = {
 const BUILT_TARGETS = {
 	"shelter": 3.0,
 	"power": 3.0,
+	"sanitation": 3.0,
+	"healthcare": 3.0,
 }
 
 static func _availability(resources: Dictionary, key: String) -> float:
@@ -55,6 +57,16 @@ static func _built_availability(state: Dictionary, category: String) -> float:
 	var built: Array = state.get("built_infrastructure", {}).get(category, [])
 	var target = float(BUILT_TARGETS.get(category, 1.0))
 	return clamp(float(built.size()) / target * 100.0, 0.0, 100.0)
+
+## Banked amount *beyond* the immediate-use target counts toward reserve
+## capacity (Infrastructure Resilience) -- e.g. banking 2x the O2 target
+## means half of it is genuinely spare, not just enough to get by. Scaled
+## against the same target again, so a full second target's worth of
+## surplus reads as 100.
+static func _surplus(resources: Dictionary, key: String) -> float:
+	var banked = float(resources.get(key, 0.0))
+	var target = float(TARGETS.get(key, 1.0))
+	return clamp((banked - target) / target * 100.0, 0.0, 100.0)
 
 static func _category(sub_measures: Array) -> Dictionary:
 	var total = 0.0
@@ -73,8 +85,8 @@ static func compute(state: Dictionary) -> Dictionary:
 		{"label": "Water (Potable Water reserves)", "score": _availability(resources, "Potable Water"), "tracked": true},
 		{"label": "Food reserves", "score": _availability(resources, "Food"), "tracked": true},
 		{"label": "Shelter availability", "score": _built_availability(state, "shelter"), "tracked": true},
-		{"label": "Sanitation availability", "score": 100.0, "tracked": false},
-		{"label": "Basic healthcare access", "score": 100.0, "tracked": false},
+		{"label": "Sanitation availability", "score": _built_availability(state, "sanitation"), "tracked": true},
+		{"label": "Basic healthcare access", "score": _built_availability(state, "healthcare"), "tracked": true},
 	])
 
 	var silicon = _category([
@@ -85,22 +97,24 @@ static func compute(state: Dictionary) -> Dictionary:
 		{"label": "Communication network availability", "score": 100.0, "tracked": false},
 	])
 
-	# The one Infrastructure sub-measure that's real today: banked raw +
-	# refined industrial materials, as a proxy for "the Commonwealth has
-	# reserves it could draw on." Everything else in this category
-	# (redundancy, recovery, distribution, habitat reliability) needs a
-	# system that doesn't exist yet (no multi-habitat tracking, no failure/
-	# recovery simulation).
+	# Reserve capacity: banked raw + refined industrial materials, as a
+	# proxy for "the Commonwealth has reserves it could draw on."
 	var reserve_capacity = _availability(resources, "PGM") * 0.4 \
 		+ _availability(resources, "Gold") * 0.2 \
 		+ _availability(resources, "Platinum") * 0.2 \
 		+ _availability(resources, "Steel") * 0.2
+	# Life-support surplus: O2/Water/Food banked *beyond* what Biological
+	# Life Support already counts as "sufficient" -- a second reserve
+	# capacity signal from the same resources, since a civilization with a
+	# stockpile beyond immediate needs is more resilient than one running
+	# exactly at the line, even at the same headline life-support score.
+	var life_support_surplus = (_surplus(resources, "O2") + _surplus(resources, "Potable Water") + _surplus(resources, "Food")) / 3.0
 	var infrastructure = _category([
 		{"label": "Reserve capacity (raw + refined materials)", "score": reserve_capacity, "tracked": true},
+		{"label": "Life-support surplus (O2/Water/Food above target)", "score": life_support_surplus, "tracked": true},
 		{"label": "System redundancy", "score": 100.0, "tracked": false},
 		{"label": "Recovery capability", "score": 100.0, "tracked": false},
 		{"label": "Distribution network reliability", "score": 100.0, "tracked": false},
-		{"label": "Habitat life-support reliability", "score": 100.0, "tracked": false},
 	])
 
 	# CompliancePoints (earned by completing governance/CUR levels) is used

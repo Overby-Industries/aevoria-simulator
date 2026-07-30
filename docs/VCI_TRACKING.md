@@ -88,15 +88,19 @@ Current mapping:
 | | Water (Potable Water reserves) | ✅ tracked — `Potable Water` resource |
 | | Food reserves | ✅ tracked — `Food` resource |
 | | Shelter availability | ✅ tracked — distinct saved ships including `habitat_ring_mk1` (`FactionHomeBase.mark_infrastructure_built`, written from `assembly_bay.gd`'s save handler) |
-| | Sanitation / Basic healthcare | baseline — no system yet |
+| | Sanitation availability | ✅ tracked — distinct saved ships including the `waste_recycler_mk1` part, same mechanism as Shelter |
+| | Basic healthcare access | ✅ tracked — distinct saved ships including the `medbay_mk1` part, same mechanism as Shelter |
 | Silicon-Based Life Support | Electrical power continuity | ✅ tracked — distinct saved ships including `power_cell_mk1`, same mechanism as Shelter above |
 | | Computational / data / memory / comms continuity | baseline — no silicon-based-life system exists in the game yet at all |
 | Infrastructure Resilience | Reserve capacity | ✅ tracked — banked `PGM`/`Gold`/`Platinum`/`Steel` |
-| | Redundancy / recovery / distribution / habitat reliability | baseline — no system yet |
+| | Life-support surplus | ✅ tracked — `O2`/`Potable Water`/`Food` banked *beyond* their Biological Life Support target, a second reserve-capacity signal from the same resources |
+| | Redundancy / recovery / distribution | baseline — no system yet |
 | Accessibility | Service availability | ✅ tracked — banked `CompliancePoints`, as a thin proxy for "the CUR/governance apparatus is functioning" |
 | | Distribution effectiveness / equity / consistency | baseline — only one faction/player exists, nothing to be inequitable about yet |
 
-**Shelter/Power scoring**: `FactionHomeBase.mark_infrastructure_built(faction_id, category, ship_id)` records a *distinct* ship id per category (deduped, so re-saving the same ship after a paint job doesn't inflate the count). `vci_tracker.gd`'s `BUILT_TARGETS` currently considers 3 distinct habitat-equipped (or power-cell-equipped) ships "fully sufficient" — a floor to build real numbers up from later, not a researched target, same spirit as the resource `TARGETS` above.
+**Shelter/Power/Sanitation/Healthcare scoring**: `FactionHomeBase.mark_infrastructure_built(faction_id, category, ship_id)` records a *distinct* ship id per category (deduped, so re-saving the same ship after a paint job doesn't inflate the count). `vci_tracker.gd`'s `BUILT_TARGETS` currently considers 3 distinct ships equipped with the relevant part (`habitat_ring_mk1`, `power_cell_mk1`, `waste_recycler_mk1`, `medbay_mk1` respectively) "fully sufficient" — a floor to build real numbers up from later, not a researched target, same spirit as the resource `TARGETS` above. The habitat ring gained two new sockets (`sanitation_mount`, `medbay_mount`) to carry the last two parts — `PART_CAT_WASTE_RECYCLER` already existed in `src/part_types.h` unused since the original kit-bashing pass, so only the Medbay category (`PART_CAT_MEDBAY`) needed a new C++ enum entry + rebuild.
+
+**Life-support surplus scoring**: `vci_tracker.gd`'s `_surplus(resources, key)` scores `(banked - target) / target`, clamped 0-100 — banking a full second target's worth beyond what Biological Life Support already needs reads as 100. This double-counts the same banked resource across two categories on purpose: a stockpile beyond immediate needs is a real resilience signal distinct from "are current needs met," which is exactly what FOUNDATION-003 §11 means by Infrastructure Resilience as opposed to the raw life-support scores.
 
 ## How to make more of this real
 
@@ -115,18 +119,21 @@ Each new tracked sub-measure follows the same shape:
 
 Good next candidates, roughly in order of how little new infrastructure
 they'd need:
-- **Reserve capacity** could grow to include `O2`/`Potable Water`/`Food`
-  surplus (above immediate-use levels), not just industrial materials.
-- **Sanitation / Basic healthcare** — would need their own new part types
-  or bay mechanics (nothing in `part_catalog.gd` maps to either concept
-  today); Shelter/Power's "distinct saved ship including part X" pattern
-  (`FactionHomeBase.mark_infrastructure_built`) is directly reusable once
-  such a part exists.
-- Everything else under Silicon-Based Life Support (compute, data
-  integrity, memory continuity, comms) is blocked on the "AI Cognitive
-  Health Management" mechanic from the README's vision even existing in
-  any form — there's no AI miner swarm system in the game yet at all,
-  just the concept.
+- **System redundancy / recovery capability** (Infrastructure Resilience)
+  could use the same "count of distinct built X" pattern as Shelter/Power/
+  Sanitation/Healthcare, once there's a second habitat or power part to
+  build *more than one of* — right now every category with that pattern
+  has exactly one qualifying part, so "redundancy" and "the thing exists
+  at all" would be the same measurement.
+- **Distribution network reliability** and **Distribution effectiveness /
+  access equity** (Accessibility) both need more than one faction/player
+  actually playing at once to mean anything — natural to revisit once
+  `docs/MULTIPLAYER_ROADMAP.md`'s async governance layer exists.
+- Everything under Silicon-Based Life Support past Electrical power
+  (compute, data integrity, memory continuity, comms) is blocked on the
+  "AI Cognitive Health Management" mechanic from the README's vision even
+  existing in any form — there's no AI miner swarm system in the game yet
+  at all, just the concept.
 
 ## Where this is headed
 
