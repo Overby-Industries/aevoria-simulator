@@ -38,6 +38,18 @@ const FLARE_SPECS = [
 	{"t": 1.6, "scale": 0.45, "color": Color(1.0, 0.6, 0.3, 0.18)},
 ]
 
+# Anamorphic streaks -- the horizontal blue bars an anamorphic lens
+# produces (Star Trek/Interstellar-style), as opposed to FLARE_SPECS'
+# round ghosts. Built by stretching the same radial gradient texture into
+# a thin wide rect instead of a square, all centered on the sun itself
+# (t = 0) since that's where a real anamorphic streak originates.
+const STREAK_SPECS = [
+	{"t": 0.0, "width": 640.0, "height": 8.0, "color": Color(0.55, 0.78, 1.0, 0.8)},
+	{"t": 0.0, "width": 1000.0, "height": 26.0, "color": Color(0.35, 0.6, 1.0, 0.28)},
+	{"t": 0.0, "width": 240.0, "height": 4.0, "color": Color(0.9, 0.95, 1.0, 0.9)},
+	{"t": 1.0, "width": 260.0, "height": 3.0, "color": Color(0.5, 0.75, 1.0, 0.18)},
+]
+
 var _rotator: Node3D
 var _camera: Camera3D
 var _flare_sprites: Array = []
@@ -175,8 +187,27 @@ func _build_lens_flare() -> void:
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		rect.material = additive
 		rect.modulate = spec["color"]
+		rect.set_meta("shape", "circle")
 		rect.set_meta("t", spec["t"])
 		rect.set_meta("flare_scale", spec["scale"])
+		rect.visible = false
+		flare_layer.add_child(rect)
+		_flare_sprites.append(rect)
+
+	# Same texture, non-uniform stretch (TextureRect's default STRETCH_SCALE
+	# fills the rect ignoring aspect ratio) -- a circle stretched into a
+	# thin wide rect *is* an anamorphic streak, no separate texture needed.
+	for spec in STREAK_SPECS:
+		var rect := TextureRect.new()
+		rect.texture = _flare_texture
+		rect.stretch_mode = TextureRect.STRETCH_SCALE
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.material = additive
+		rect.modulate = spec["color"]
+		rect.set_meta("shape", "streak")
+		rect.set_meta("t", spec["t"])
+		rect.set_meta("streak_w", spec["width"])
+		rect.set_meta("streak_h", spec["height"])
 		rect.visible = false
 		flare_layer.add_child(rect)
 		_flare_sprites.append(rect)
@@ -217,9 +248,13 @@ func _update_lens_flare() -> void:
 	var to_center = center - sun_screen
 	for sprite in _flare_sprites:
 		var t: float = sprite.get_meta("t")
-		var scale: float = sprite.get_meta("flare_scale")
 		var pos = sun_screen + to_center * t
-		var size = 130.0 * scale
-		sprite.size = Vector2(size, size)
-		sprite.position = pos - Vector2(size, size) * 0.5
+		var size: Vector2
+		if sprite.get_meta("shape") == "streak":
+			size = Vector2(sprite.get_meta("streak_w"), sprite.get_meta("streak_h"))
+		else:
+			var scale: float = sprite.get_meta("flare_scale")
+			size = Vector2(130.0 * scale, 130.0 * scale)
+		sprite.size = size
+		sprite.position = pos - size * 0.5
 		sprite.visible = true
