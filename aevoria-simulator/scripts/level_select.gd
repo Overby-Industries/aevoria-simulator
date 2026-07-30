@@ -125,9 +125,9 @@ func _format_resources(resources: Dictionary) -> String:
 
 func _build_level_card(level: Dictionary, state: Dictionary) -> PanelContainer:
 	var card = PanelContainer.new()
-	var is_governance = level["kind"] == LevelCatalog.Kind.GOVERNANCE
-	if is_governance:
-		card.theme_type_variation = "AevoriaPanel"
+	card.theme_type_variation = "GlassPanelFrame"
+	var card_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.3), 1.0)
+	card.add_child(card_bg)
 
 	var inner = VBoxContainer.new()
 	card.add_child(inner)
@@ -144,13 +144,9 @@ func _build_level_card(level: Dictionary, state: Dictionary) -> PanelContainer:
 	objective.custom_minimum_size = Vector2(380, 0)
 	inner.add_child(objective)
 
-	if is_governance:
-		title.add_theme_color_override("font_color", Color("1a1f26"))
-		objective.add_theme_color_override("font_color", Color("3a4148"))
-
 	var launch_button = Button.new()
 	launch_button.text = "Launch"
-	launch_button.theme_type_variation = "AevoriaButton" if is_governance else "GlassButton"
+	launch_button.theme_type_variation = "GlassButton"
 	var level_id = level["id"]
 	var faction_id = level["faction_id"]
 	var scene_path = level["scene_path"]
