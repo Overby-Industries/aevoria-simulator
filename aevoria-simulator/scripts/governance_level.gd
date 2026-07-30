@@ -5,6 +5,13 @@ extends Node
 ## stage -- the "CUR learning tool tips" the level select promises.
 ## Reuses CURComplianceMonitor + CurHud verbatim; this script only adds
 ## the step script and the tutorial overlay around them.
+##
+## Every step here is scripted and local to this one player's session --
+## there's no real community vote yet. The _steps array (a "text" + an
+## "action" closure per step) is the shape a future real-vote step would
+## slot into: see docs/MULTIPLAYER_ROADMAP.md for how a step's action
+## would call a community_governance.gd autoload instead of
+## monitor.submit_operational() directly.
 
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud

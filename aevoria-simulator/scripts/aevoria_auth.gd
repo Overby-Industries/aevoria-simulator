@@ -17,6 +17,10 @@ extends Node
 ## build, so players always get production with no flag needed. Pass
 ## "--prod-backend" to a debug build to force production instead (e.g. to
 ## reproduce a live-only bug) without doing a full release export.
+##
+## This is also the seam any future community-voting/multiplayer feature
+## would build on -- SUPABASE_URL/access_token + the same HTTPRequest+signal
+## pattern fetch_owned_skins() below uses. See docs/MULTIPLAYER_ROADMAP.md.
 
 const PROD_SUPABASE_URL = "https://hpskqefglvjmdegkptfl.supabase.co"
 const PROD_SUPABASE_ANON_KEY = "sb_publishable_axQ9YhS3uCmq8oJw0-jbnw_I0G3B3ai"
@@ -98,6 +102,7 @@ func _on_login_response(_result, response_code, _headers, body):
 			message = data["error_description"]
 		elif data is Dictionary and data.has("msg"):
 			message = data["msg"]
+		SystemLog.log("Login failed: %s" % message)
 		login_failed.emit(message)
 		return
 
@@ -107,6 +112,7 @@ func _on_login_response(_result, response_code, _headers, body):
 	user_id = user.get("id", "")
 	user_email = user.get("email", "")
 	_save_session()
+	SystemLog.log("Authenticated as %s." % user_email)
 	login_succeeded.emit({"id": user_id, "email": user_email})
 
 # --- session persistence + silent refresh -----------------------------------
@@ -158,9 +164,11 @@ func _on_refresh_response(_result, response_code, _headers, body):
 	if user.has("email"):
 		user_email = user.get("email", "")
 	_save_session()
+	SystemLog.log("Session restored for %s." % user_email)
 	login_succeeded.emit({"id": user_id, "email": user_email})
 
 func logout():
+	SystemLog.log("Logged out.")
 	access_token = ""
 	refresh_token = ""
 	user_id = ""
@@ -194,6 +202,8 @@ func _on_skins_response(_result, response_code, _headers, body):
 	var text = body.get_string_from_utf8()
 	var data = JSON.parse_string(text)
 	if response_code != 200 or not (data is Array):
+		SystemLog.log("Could not load owned items from the Commonwealth account.")
 		skins_fetch_failed.emit("Could not load owned skins.")
 		return
+	SystemLog.log("Loaded %d owned item(s)." % data.size())
 	skins_fetched.emit(data)

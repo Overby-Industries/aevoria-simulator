@@ -13,13 +13,25 @@ config_version=5
 config/name="Aevoria Simulator"
 run/main_scene="res://scenes/LevelSelect.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
 
 [autoload]
 
+SystemLog="*res://scripts/system_log.gd"
+WindowControls="*res://scripts/window_controls.gd"
 ThemeBootstrap="*res://scripts/theme_bootstrap.gd"
 AevoriaAuth="*res://scripts/aevoria_auth.gd"
 LevelContext="*res://scripts/level_context.gd"
+
+[display]
+
+; Fullscreen (borderless, not exclusive -- better alt-tab/multi-monitor
+; behavior) by default: the fixed-position corner HUD panels overlap each
+; other at small windowed sizes, and most players' first launch shouldn't
+; require them to manually maximize. window_controls.gd (autoload) gives
+; players a way out via F11, since always-fullscreen-with-no-toggle would
+; trap anyone who wants windowed mode.
+window/size/mode=3
 
 [physics]
 

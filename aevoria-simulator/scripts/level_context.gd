@@ -13,6 +13,17 @@ signal level_finished(level_id: String)
 var current_level_id: String = ""
 var current_faction_id: String = ""
 
+## Debug-build-only escape hatch (see level_select.gd's debug faction
+## switcher) so a developer can actually reach the Oligarch Combine/Nomad
+## Flotilla exclusive hulls in part_catalog.gd for testing/demos --
+## content that's real (three faction-exclusive hulls already exist) but
+## unreachable in a normal playthrough today, since every level in
+## level_catalog.gd is currently flagged Commonwealth-only. Empty string
+## means "no override, use the level's own faction_id" -- the untouched,
+## shipped behavior. Survives a scene reload (that's the whole point --
+## an ordinary var reset on every LevelSelect._ready() wouldn't).
+var debug_faction_override: String = ""
+
 func start_level(level_id: String, faction_id: String) -> void:
 	current_level_id = level_id
 	current_faction_id = faction_id
@@ -23,5 +34,12 @@ func finish_current_level(reward: Dictionary = {}) -> void:
 	FactionHomeBase.mark_level_complete(current_faction_id, current_level_id)
 	for resource_name in reward.keys():
 		FactionHomeBase.add_resource(current_faction_id, resource_name, float(reward[resource_name]))
+	if reward.is_empty():
+		SystemLog.log("Level complete: %s." % current_level_id)
+	else:
+		var parts: Array = []
+		for resource_name in reward.keys():
+			parts.append("+%.1f %s" % [float(reward[resource_name]), resource_name])
+		SystemLog.log("Level complete: %s (%s)." % [current_level_id, ", ".join(parts)])
 	level_finished.emit(current_level_id)
 	current_level_id = ""

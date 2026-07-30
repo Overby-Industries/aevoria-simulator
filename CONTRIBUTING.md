@@ -3,7 +3,12 @@
 This is the practical, "how do I actually change something" guide. For
 the vision/lore, see [README.md](README.md). For the deep reference on
 the procedural graphics system specifically, see
-[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md).
+[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md). For why the game is
+single-player today and how community voting/multiplayer would get added
+later, see [docs/MULTIPLAYER_ROADMAP.md](docs/MULTIPLAYER_ROADMAP.md). For
+the Commonwealth's Vital Continuity Index (the health-meter panel on the
+front door) and what's real vs. placeholder in it today, see
+[docs/VCI_TRACKING.md](docs/VCI_TRACKING.md).
 
 ## Project layout
 
@@ -107,6 +112,27 @@ add a new level:
 4. Every level should end with a "Back to Level Select" button
    (`get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn")`) — every
    existing level has one, players have no other way back.
+
+**Testing other factions:** every level in `level_catalog.gd` is flagged
+Commonwealth-only today, but `part_catalog.gd` already has faction-exclusive
+hulls for `OLIGARCH_COMBINE` and `NOMAD_FLOTILLA` (the tube rocket and
+drift hull) with no normal way to reach them in a playthrough. Debug
+builds (`OS.is_debug_build()`) get a "DEBUG FACTION" button row at the
+top of Level Select (`level_select.gd`'s `_build_debug_faction_row()`)
+that overrides which faction levels launch as, purely for testing/demo
+purposes — it does nothing in a release export, and doesn't add any real
+faction-select gameplay (see `docs/MULTIPLAYER_ROADMAP.md`/the "spheres
+of influence" note in README.md for where that's actually headed).
+
+**Known gap, deliberately deferred:** most levels are still a plain gray
+background with a camera/light and a UI panel — no real 3D scene dressing.
+The plan (as of 2026-07-29) is to flesh out VCI tracking first (see
+[docs/VCI_TRACKING.md](docs/VCI_TRACKING.md)) so there's a real objective
+system to build longer, multi-level campaigns against, and to give each
+level a proper 3D scene as part of that campaign work rather than as a
+separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd` (see
+[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s "System 4") are the
+reusable pieces this would build on when the time comes.
 5. If the level's UI panel might grow past a few items, wrap it in a
    `ScrollContainer` from the start (see any level's `_build_ui()`) — this bit
    the project twice already (`AssemblyBay`, then `LevelSelect` itself) once a
@@ -126,10 +152,51 @@ genuinely new *shape* (not just new numbers for an existing shape) touches
 `aevoria-simulator/export_presets.cfg` defines the "Windows Desktop" export
 preset. `aevoria-simulator/deploy_to_itch.ps1` does the full release cycle in
 one command: exports a release build, then pushes it to itch.io via
-`butler` (incremental patches only — fast after the first push). Requires
-Godot's export templates to be installed
-(`%APPDATA%\Godot\export_templates\4.6.3.stable\`) and `butler login` to have
-been run once already.
+`butler` (incremental patches only — fast after the first push).
+
+**Committing your changes locally does not update the live download** — the
+itch.io build only moves forward when someone actually runs the deploy
+script below. It's easy to do a whole session of edits, commit them, and
+forget this last step (players still get whatever the last deploy shipped).
+
+1. If you touched anything under `src/` or `cur/` (C++), rebuild the
+   **release** target first:
+   ```bash
+   python -m SCons platform=windows target=template_release -j4
+   ```
+   `deploy_to_itch.ps1` does *not* do this for you — it assumes a current
+   `libaevoria.windows.template_release.x86_64.dll` already exists and will
+   happily export a build with a stale/missing one. Pure GDScript/`.tscn`
+   changes never need this step, since they're read at runtime, not compiled
+   in.
+2. Run the deploy script from the repo root:
+   ```powershell
+   powershell -File aevoria-simulator/deploy_to_itch.ps1
+   ```
+   This exports a fresh "Windows Desktop" release build via Godot's headless
+   `--export-release`, then pushes it to the `windows` channel via
+   `butler push`. It then reads back the build number butler just assigned
+   (the same number shown on the public itch.io page) and stamps it as
+   `1.0.<N>` across the repo -- the README badge, `CONTRIBUTORS.md`,
+   `web/package.json`/`package-lock.json`, and the exported .exe's Windows
+   file-version metadata in `export_presets.cfg` -- via `sync_version.ps1`
+   at the repo root. This is what keeps "the version" meaning one specific
+   number everywhere instead of drifting (the web app used to say `1.0.1`
+   while itch was already on build 11). You can also run
+   `powershell -File sync_version.ps1 -BuildNumber <N>` by hand if you ever
+   need to re-sync without doing a full deploy.
+3. Confirm it actually landed (don't just trust a clean exit code):
+   ```powershell
+   c:\Users\keefe\AppData\Local\butler\butler.exe status aevoria-simulator/aevoria-simulator-per-avia-ad-astra
+   ```
+   Check the build number incremented and the timestamp is recent — that's
+   also exactly what shows up as the version number on the public itch.io
+   page.
+
+One-time setup this depends on (already done on this machine, listed here in
+case you're setting up a new one): Godot's export templates installed
+(`%APPDATA%\Godot\export_templates\4.6.3.stable\`), and `butler login` run
+once (credentials cached at `~/.config/itch/butler_creds`).
 
 ## Common problems and their actual cause
 

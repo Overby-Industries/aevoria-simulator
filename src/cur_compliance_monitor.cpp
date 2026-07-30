@@ -143,6 +143,11 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_capture_risk"), &CURComplianceMonitor::get_capture_risk);
     ClassDB::bind_method(D_METHOD("get_capture_risk_band"), &CURComplianceMonitor::get_capture_risk_band);
 
+    ClassDB::bind_method(D_METHOD("update_vital_continuity", "entity_handle", "inputs", "tick"),
+                         &CURComplianceMonitor::update_vital_continuity);
+    ClassDB::bind_method(D_METHOD("get_vital_continuity"), &CURComplianceMonitor::get_vital_continuity);
+    ClassDB::bind_method(D_METHOD("get_vital_continuity_band"), &CURComplianceMonitor::get_vital_continuity_band);
+
     ClassDB::bind_method(D_METHOD("propose_regulation_amendment", "regulation", "proposal_id", "author_id", "rationale", "tick"),
                          &CURComplianceMonitor::propose_regulation_amendment);
 
@@ -173,6 +178,7 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_method(D_METHOD("fault_class_name", "fault"), &CURComplianceMonitor::fault_class_name);
     ClassDB::bind_method(D_METHOD("forbidden_state_name", "forbidden"), &CURComplianceMonitor::forbidden_state_name);
     ClassDB::bind_method(D_METHOD("capture_risk_band_name", "band"), &CURComplianceMonitor::capture_risk_band_name);
+    ClassDB::bind_method(D_METHOD("vital_continuity_band_name", "band"), &CURComplianceMonitor::vital_continuity_band_name);
 
     ADD_SIGNAL(MethodInfo("transition_accepted",
                           PropertyInfo(Variant::STRING, "entity_id"),
@@ -259,6 +265,15 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "CRB_ELEVATED", cur::CRB_ELEVATED);
     ClassDB::bind_integer_constant(get_class_static(), "", "CRB_HIGH", cur::CRB_HIGH);
     ClassDB::bind_integer_constant(get_class_static(), "", "CRB_CRITICAL", cur::CRB_CRITICAL);
+
+    // VitalContinuityBand (cur_capture_index.h) -- note this runs opposite to
+    // CaptureRiskBand: higher VCI is better, so VCB_STABLE is the top band
+    // instead of the bottom one. See the big comment in cur_capture_index.h.
+    ClassDB::bind_integer_constant(get_class_static(), "", "VCB_CRITICAL", cur::VCB_CRITICAL);
+    ClassDB::bind_integer_constant(get_class_static(), "", "VCB_HIGH_RISK", cur::VCB_HIGH_RISK);
+    ClassDB::bind_integer_constant(get_class_static(), "", "VCB_ELEVATED", cur::VCB_ELEVATED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "VCB_OBSERVATION", cur::VCB_OBSERVATION);
+    ClassDB::bind_integer_constant(get_class_static(), "", "VCB_STABLE", cur::VCB_STABLE);
 
     // EntityHandle sentinel (cur_event.h) — a caller-visible "not found".
     ClassDB::bind_integer_constant(get_class_static(), "", "INVALID_ENTITY", int64_t(cur::INVALID_ENTITY));
@@ -445,6 +460,24 @@ double CURComplianceMonitor::update_capture_risk(const Dictionary &inputs, int64
 double CURComplianceMonitor::get_capture_risk() const { return machine.capture_risk(); }
 
 int CURComplianceMonitor::get_capture_risk_band() const { return int(machine.capture_risk_band()); }
+
+double CURComplianceMonitor::update_vital_continuity(int64_t entity_handle, const Dictionary &inputs,
+                                                     int64_t tick) {
+    cur::VitalContinuityInputs in;
+    in.biological_life_support = double(inputs.get("biological_life_support", 100.0));
+    in.silicon_life_support = double(inputs.get("silicon_life_support", 100.0));
+    in.infrastructure_resilience = double(inputs.get("infrastructure_resilience", 100.0));
+    in.accessibility = double(inputs.get("accessibility", 100.0));
+    return machine.update_vital_continuity(static_cast<cur::EntityHandle>(entity_handle), in, uint64_t(tick));
+}
+
+double CURComplianceMonitor::get_vital_continuity() const { return machine.vital_continuity(); }
+
+int CURComplianceMonitor::get_vital_continuity_band() const { return int(machine.vital_continuity_band()); }
+
+String CURComplianceMonitor::vital_continuity_band_name(int band) const {
+    return String::utf8(cur::to_string(static_cast<cur::VitalContinuityBand>(band)));
+}
 
 Dictionary CURComplianceMonitor::propose_regulation_amendment(const Ref<CURGodotBridge> &regulation,
                                                                const String &proposal_id,

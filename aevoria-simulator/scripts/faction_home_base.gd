@@ -11,6 +11,12 @@ extends RefCounted
 ##
 ## No class_name, matching part_catalog.gd / theme_builder.gd's
 ## preload()-only convention.
+##
+## This stays local-only on purpose even if community voting/multiplayer
+## gets built later -- it's personal ship/mining/resource progress, not
+## shared Commonwealth state. See docs/MULTIPLAYER_ROADMAP.md for what
+## *would* move to a shared Supabase backend (governance/voting) vs. what
+## wouldn't (this file).
 
 const DIR = "user://factions"
 
@@ -20,14 +26,15 @@ static func _path(faction_id: String) -> String:
 static func load_state(faction_id: String) -> Dictionary:
 	var path = _path(faction_id)
 	if not FileAccess.file_exists(path):
-		return {"faction_id": faction_id, "resources": {}, "completed_levels": []}
+		return {"faction_id": faction_id, "resources": {}, "completed_levels": [], "built_infrastructure": {}}
 	var file = FileAccess.open(path, FileAccess.READ)
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	if typeof(parsed) != TYPE_DICTIONARY:
-		return {"faction_id": faction_id, "resources": {}, "completed_levels": []}
+		return {"faction_id": faction_id, "resources": {}, "completed_levels": [], "built_infrastructure": {}}
 	parsed["resources"] = parsed.get("resources", {})
 	parsed["completed_levels"] = parsed.get("completed_levels", [])
+	parsed["built_infrastructure"] = parsed.get("built_infrastructure", {})
 	return parsed
 
 static func save_state(state: Dictionary) -> void:
@@ -61,3 +68,22 @@ static func spend_resource(faction_id: String, resource_name: String, amount: fl
 	state["resources"][resource_name] = current - amount
 	save_state(state)
 	return true
+
+## Records that a distinct ship/structure (identified by ship_id) provides
+## a given infrastructure category ("shelter", "power", etc. -- see
+## assembly_bay.gd's _on_save_pressed and vci_tracker.gd, which reads this
+## back via count_built()). Deduped by ship_id so re-saving the same ship
+## repeatedly doesn't inflate the count -- this counts distinct
+## constructed units, not save events.
+static func mark_infrastructure_built(faction_id: String, category: String, ship_id: String) -> void:
+	var state = load_state(faction_id)
+	var built: Array = state["built_infrastructure"].get(category, [])
+	if not built.has(ship_id):
+		built.append(ship_id)
+	state["built_infrastructure"][category] = built
+	save_state(state)
+
+static func count_built(faction_id: String, category: String) -> int:
+	var state = load_state(faction_id)
+	var built: Array = state["built_infrastructure"].get(category, [])
+	return built.size()

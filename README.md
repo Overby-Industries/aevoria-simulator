@@ -1,6 +1,6 @@
 # 🌌 Aevoria Simulator: Per Avia, Ad Astra
 
-[![Version](https://img.shields.io/badge/Version-1.0.1--Alpha-blue?style=for-the-badge&logo=github)](https://github.com/Overby-Industries/aevoria-simulator/releases)
+[![Version](https://img.shields.io/badge/Version-1.0.11--Alpha-blue?style=for-the-badge&logo=github)](https://github.com/Overby-Industries/aevoria-simulator/releases)
 [![License](https://img.shields.io/badge/License-CC0_1.0-lightgrey?style=for-the-badge&logo=creative-commons)](https://creativecommons.org/publicdomain/zero/1.0/)
 [![Governance](https://img.shields.io/badge/Governance-CUR_Direct_Democracy-purple?style=for-the-badge)](https://github.com/Overby-Industries/rights-for-all-life)
 [![Ethics](https://img.shields.io/badge/Ethics-Rights_for_All_Life-green?style=for-the-badge)](https://github.com/Overby-Industries/rights-for-all-life)
@@ -138,12 +138,21 @@ The Aevoria Simulator is the playable proving ground for the broader Overby Indu
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### Play Now
+
+**[Download Aevoria Simulator on itch.io →](https://aevoria-simulator.itch.io/aevoria-simulator-per-avia-ad-astra)**
+
+Windows build, name-your-own-price. This is the fastest way to actually
+play — no build tools required.
+
+### Build from Source (for contributors)
+
+#### Prerequisites
 *   [Godot 4.6.3](https://godotengine.org/download/archive/4.6.3-stable/) (stable)
 *   Python 3 with SCons (`pip install scons`) — builds the GDExtension
 *   A C++17 compiler (MSVC on Windows)
 
-### Installation
+#### Installation
 ```bash
 # Clone the repository, including the godot-cpp and cur submodules
 git clone --recurse-submodules https://github.com/Overby-Industries/aevoria-simulator.git
