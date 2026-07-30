@@ -34,10 +34,27 @@ const TARGETS = {
 	"CompliancePoints": 20.0,
 }
 
+# Distinct constructed ships/structures providing a given infrastructure
+# category (see faction_home_base.gd's mark_infrastructure_built(),
+# written from assembly_bay.gd whenever a saved ship includes the
+# relevant part) considered "fully sufficient" for a score of 100. Small
+# numbers on purpose -- there's no population model yet to size these
+# against, so this is a floor to build real numbers up from, not a
+# researched target.
+const BUILT_TARGETS = {
+	"shelter": 3.0,
+	"power": 3.0,
+}
+
 static func _availability(resources: Dictionary, key: String) -> float:
 	var banked = float(resources.get(key, 0.0))
 	var target = float(TARGETS.get(key, 1.0))
 	return clamp(banked / target * 100.0, 0.0, 100.0)
+
+static func _built_availability(state: Dictionary, category: String) -> float:
+	var built: Array = state.get("built_infrastructure", {}).get(category, [])
+	var target = float(BUILT_TARGETS.get(category, 1.0))
+	return clamp(float(built.size()) / target * 100.0, 0.0, 100.0)
 
 static func _category(sub_measures: Array) -> Dictionary:
 	var total = 0.0
@@ -55,13 +72,13 @@ static func compute(state: Dictionary) -> Dictionary:
 		{"label": "Air (O2 reserves)", "score": _availability(resources, "O2"), "tracked": true},
 		{"label": "Water (Potable Water reserves)", "score": _availability(resources, "Potable Water"), "tracked": true},
 		{"label": "Food reserves", "score": _availability(resources, "Food"), "tracked": true},
-		{"label": "Shelter availability", "score": 100.0, "tracked": false},
+		{"label": "Shelter availability", "score": _built_availability(state, "shelter"), "tracked": true},
 		{"label": "Sanitation availability", "score": 100.0, "tracked": false},
 		{"label": "Basic healthcare access", "score": 100.0, "tracked": false},
 	])
 
 	var silicon = _category([
-		{"label": "Electrical power continuity", "score": 100.0, "tracked": false},
+		{"label": "Electrical power continuity", "score": _built_availability(state, "power"), "tracked": true},
 		{"label": "Computational continuity", "score": 100.0, "tracked": false},
 		{"label": "Data integrity preservation", "score": 100.0, "tracked": false},
 		{"label": "Memory continuity protection", "score": 100.0, "tracked": false},

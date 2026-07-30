@@ -10,6 +10,14 @@ extends Node3D
 const PartCatalog = preload("res://scripts/part_catalog.gd")
 const CameraFraming = preload("res://scripts/camera_framing.gd")
 const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
+const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+
+# Part IDs that count toward the Commonwealth's VCI tracking when a ship
+# including one is saved -- see faction_home_base.gd's
+# mark_infrastructure_built() and vci_tracker.gd's "Shelter
+# availability"/"Electrical power continuity" sub-measures.
+const SHELTER_PART_ID = "habitat_ring_mk1"
+const POWER_PART_ID = "power_cell_mk1"
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var camera: Camera3D = $Camera3D
@@ -487,8 +495,28 @@ func _on_save_pressed():
 	file.store_string(_blueprint.to_json())
 	file.close()
 	_status_label.text = "Saved: " + ProjectSettings.globalize_path(path)
+	_record_infrastructure()
 	if LevelContext.current_level_id != "":
 		_finish_button.visible = true
+
+## Distinct saved ships that include a habitat or power part count toward
+## the Commonwealth's Vital Continuity Index -- see the constants above
+## and docs/VCI_TRACKING.md. Deduped by ship_id (FactionHomeBase's job),
+## so tweaking and re-saving the same ship doesn't inflate the count.
+func _record_infrastructure() -> void:
+	var faction_id = LevelContext.current_faction_id
+	if faction_id == "":
+		return
+	var part_ids: Array = [_blueprint.root_part_id]
+	for attachment in _blueprint.attachments:
+		part_ids.append(attachment["part_id"])
+
+	if part_ids.has(SHELTER_PART_ID):
+		FactionHomeBase.mark_infrastructure_built(faction_id, "shelter", _blueprint.ship_id)
+		SystemLog.log("Shelter registered: %s now provides habitat capacity." % _blueprint.ship_id)
+	if part_ids.has(POWER_PART_ID):
+		FactionHomeBase.mark_infrastructure_built(faction_id, "power", _blueprint.ship_id)
+		SystemLog.log("Power source registered: %s now feeds the Commonwealth grid." % _blueprint.ship_id)
 
 func _on_finish_pressed():
 	LevelContext.finish_current_level({"Platinum": 25.0})

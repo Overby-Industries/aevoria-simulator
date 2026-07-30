@@ -87,12 +87,16 @@ Current mapping:
 | Biological Life Support | Air (O2 reserves) | ✅ tracked — `O2` resource |
 | | Water (Potable Water reserves) | ✅ tracked — `Potable Water` resource |
 | | Food reserves | ✅ tracked — `Food` resource |
-| | Shelter / Sanitation / Basic healthcare | baseline — no system yet |
-| Silicon-Based Life Support | *(all five: power, compute, data, memory, comms)* | baseline — no silicon-based-life system exists in the game yet at all |
+| | Shelter availability | ✅ tracked — distinct saved ships including `habitat_ring_mk1` (`FactionHomeBase.mark_infrastructure_built`, written from `assembly_bay.gd`'s save handler) |
+| | Sanitation / Basic healthcare | baseline — no system yet |
+| Silicon-Based Life Support | Electrical power continuity | ✅ tracked — distinct saved ships including `power_cell_mk1`, same mechanism as Shelter above |
+| | Computational / data / memory / comms continuity | baseline — no silicon-based-life system exists in the game yet at all |
 | Infrastructure Resilience | Reserve capacity | ✅ tracked — banked `PGM`/`Gold`/`Platinum`/`Steel` |
 | | Redundancy / recovery / distribution / habitat reliability | baseline — no system yet |
 | Accessibility | Service availability | ✅ tracked — banked `CompliancePoints`, as a thin proxy for "the CUR/governance apparatus is functioning" |
 | | Distribution effectiveness / equity / consistency | baseline — only one faction/player exists, nothing to be inequitable about yet |
+
+**Shelter/Power scoring**: `FactionHomeBase.mark_infrastructure_built(faction_id, category, ship_id)` records a *distinct* ship id per category (deduped, so re-saving the same ship after a paint job doesn't inflate the count). `vci_tracker.gd`'s `BUILT_TARGETS` currently considers 3 distinct habitat-equipped (or power-cell-equipped) ships "fully sufficient" — a floor to build real numbers up from later, not a researched target, same spirit as the resource `TARGETS` above.
 
 ## How to make more of this real
 
@@ -111,19 +115,18 @@ Each new tracked sub-measure follows the same shape:
 
 Good next candidates, roughly in order of how little new infrastructure
 they'd need:
-- **Shelter availability** — needs a way to know how many habitat rings
-  the player has actually built/deployed (not just banked materials).
-  Closest existing hook: `AssemblyBlueprint` saves already know what parts
-  a ship has; nothing today aggregates "how many habitats exist" though.
 - **Reserve capacity** could grow to include `O2`/`Potable Water`/`Food`
   surplus (above immediate-use levels), not just industrial materials.
-- **Electrical power continuity** — would need a real power-production
-  system; `power_cell_mk1` exists as a ship *part* today but isn't wired
-  into any commons-level power ledger.
-- Everything under Silicon-Based Life Support is blocked on the "AI
-  Cognitive Health Management" mechanic from the README's vision even
-  existing in any form — there's no AI miner swarm system in the game
-  yet at all, just the concept.
+- **Sanitation / Basic healthcare** — would need their own new part types
+  or bay mechanics (nothing in `part_catalog.gd` maps to either concept
+  today); Shelter/Power's "distinct saved ship including part X" pattern
+  (`FactionHomeBase.mark_infrastructure_built`) is directly reusable once
+  such a part exists.
+- Everything else under Silicon-Based Life Support (compute, data
+  integrity, memory continuity, comms) is blocked on the "AI Cognitive
+  Health Management" mechanic from the README's vision even existing in
+  any form — there's no AI miner swarm system in the game yet at all,
+  just the concept.
 
 ## Where this is headed
 
