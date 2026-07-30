@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { APP_VERSION, CUR_VERSION } from '@/lib/version';
 
 const navLinkStyle: React.CSSProperties = {
   fontSize: '11px',
@@ -318,15 +319,26 @@ export default function AevoriaScene() {
         pointerEvents: 'none',
         zIndex: 10,
       }}>
-        <span style={{
-          fontSize: '10px',
-          letterSpacing: '2px',
-          color: 'rgba(255, 255, 255, 0.4)',
-          fontFamily: 'monospace',
-          textTransform: 'uppercase',
-        }}>
-          CUR v1.0.1 — Tier 0: Awakening
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <span style={{
+            fontSize: '10px',
+            letterSpacing: '2px',
+            color: 'rgba(255, 255, 255, 0.4)',
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+          }}>
+            CUR v{CUR_VERSION} — Tier 0: Awakening
+          </span>
+          <span style={{
+            fontSize: '10px',
+            letterSpacing: '2px',
+            color: 'rgba(255, 255, 255, 0.25)',
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+          }}>
+            Aevoria Simulator v{APP_VERSION} — Beta
+          </span>
+        </div>
         <span style={{
           fontSize: '10px',
           letterSpacing: '2px',
