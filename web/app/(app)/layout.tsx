@@ -59,9 +59,11 @@ export default async function AppLayout({
 const styles: Record<string, React.CSSProperties> = {
   header: {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "18px 32px",
+    gap: "12px",
+    padding: "18px 24px",
     borderBottom: "1px solid rgba(100, 150, 255, 0.15)",
     background: "rgba(11, 13, 16, 0.9)",
   },
@@ -75,8 +77,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   nav: {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: "24px",
+    gap: "16px",
   },
   navLink: {
     fontSize: "12px",
