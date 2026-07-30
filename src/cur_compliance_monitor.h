@@ -88,6 +88,27 @@ public:
     int get_vital_continuity_band() const;
     String vital_continuity_band_name(int band) const;
 
+    // --- obligations, CUR-H.6 §6.8(a) / CUR-H.7 §7.12(c)(3) / FOUNDATION-010 §5 / CUR-N.5 §5.2B --
+    // Scheduled obligations, checked on the clock rather than on a submitted
+    // event -- see cur::ObligationRegister (cur/include/cur/cur_obligation.h)
+    // for why a guard structurally cannot express "an obligation came due and
+    // went unmet." run_builtin_test() is the one entry point in the library
+    // not driven by an event; call it once per tick you advance the sim
+    // clock (or however often "the clock advances" means for this game),
+    // not once per player action.
+    int64_t open_obligation(int kind, int64_t owed_by, int64_t concerning, int64_t opened_tick,
+                            int64_t due_tick, int64_t recurrence_ticks,
+                            const String &detail = String());
+    bool discharge_obligation(int64_t id, int64_t tick);
+    // THE BUILT-IN TEST. Returns how many obligations lapsed this call.
+    int64_t run_builtin_test(int64_t tick);
+    // CUR-H.7 §7.12(d): false the moment a review obligation concerning this
+    // entity matures unmet -- the direction of failure runs against whoever
+    // owed the review, never against the entity a restriction is imposed on.
+    bool restriction_supported(int64_t concerning, int64_t tick) const;
+    Array get_outstanding_obligations(int64_t tick) const;
+    String obligation_kind_name(int kind) const;
+
     // --- amendments, the AI contributor path -------------------------------------
     Dictionary propose_regulation_amendment(const Ref<CURGodotBridge> &regulation,
                                             const String &proposal_id,
@@ -143,6 +164,7 @@ public:
                            const cur::FaultRecord &cause) override;
     void on_amendment(const cur::AmendmentProposal &p, const cur::AmendmentResult &r) override;
     void on_capture_risk(double cri, cur::CaptureRiskBand band) override;
+    void on_obligation_lapsed(const cur::Obligation &o, cur::FaultClass severity) override;
 };
 
 }  // namespace godot
