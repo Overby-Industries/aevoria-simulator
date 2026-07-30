@@ -94,13 +94,16 @@ Current mapping:
 | | Computational / data / memory / comms continuity | baseline — no silicon-based-life system exists in the game yet at all |
 | Infrastructure Resilience | Reserve capacity | ✅ tracked — banked `PGM`/`Gold`/`Platinum`/`Steel` |
 | | Life-support surplus | ✅ tracked — `O2`/`Potable Water`/`Food` banked *beyond* their Biological Life Support target, a second reserve-capacity signal from the same resources |
-| | Redundancy / recovery / distribution | baseline — no system yet |
+| | System redundancy | ✅ tracked — average across Shelter/Power/Sanitation/Healthcare of distinct built ships *beyond* `BUILT_TARGETS`' base "sufficient" count |
+| | Recovery capability / distribution network reliability | baseline — no system yet |
 | Accessibility | Service availability | ✅ tracked — banked `CompliancePoints`, as a thin proxy for "the CUR/governance apparatus is functioning" |
 | | Distribution effectiveness / equity / consistency | baseline — only one faction/player exists, nothing to be inequitable about yet |
 
 **Shelter/Power/Sanitation/Healthcare scoring**: `FactionHomeBase.mark_infrastructure_built(faction_id, category, ship_id)` records a *distinct* ship id per category (deduped, so re-saving the same ship after a paint job doesn't inflate the count). `vci_tracker.gd`'s `BUILT_TARGETS` currently considers 3 distinct ships equipped with the relevant part (`habitat_ring_mk1`, `power_cell_mk1`, `waste_recycler_mk1`, `medbay_mk1` respectively) "fully sufficient" — a floor to build real numbers up from later, not a researched target, same spirit as the resource `TARGETS` above. The habitat ring gained two new sockets (`sanitation_mount`, `medbay_mount`) to carry the last two parts — `PART_CAT_WASTE_RECYCLER` already existed in `src/part_types.h` unused since the original kit-bashing pass, so only the Medbay category (`PART_CAT_MEDBAY`) needed a new C++ enum entry + rebuild.
 
 **Life-support surplus scoring**: `vci_tracker.gd`'s `_surplus(resources, key)` scores `(banked - target) / target`, clamped 0-100 — banking a full second target's worth beyond what Biological Life Support already needs reads as 100. This double-counts the same banked resource across two categories on purpose: a stockpile beyond immediate needs is a real resilience signal distinct from "are current needs met," which is exactly what FOUNDATION-003 §11 means by Infrastructure Resilience as opposed to the raw life-support scores.
+
+**System redundancy scoring**: `_redundancy_availability(state, category)` reuses the exact same `built_infrastructure` arrays as Shelter/Power/Sanitation/Healthcare above (`mark_infrastructure_built` dedupes by *ship id*, not part id, so a player who saves 6 differently-named habitat ships already produces the data this needs) — 0 at `BUILT_TARGETS`' base count (that's "sufficient," not "redundant" yet), 100 at 2x that count. Averaged across all four categories so backup shelter with zero backup power doesn't read as fully redundant. No new part type was needed for this one, unlike Sanitation/Healthcare above — worth remembering the next time a sub-measure looks "blocked on a missing system": check whether the existing dedup-by-ship-id data already carries the signal before assuming it doesn't.
 
 ## How to make more of this real
 
@@ -119,12 +122,11 @@ Each new tracked sub-measure follows the same shape:
 
 Good next candidates, roughly in order of how little new infrastructure
 they'd need:
-- **System redundancy / recovery capability** (Infrastructure Resilience)
-  could use the same "count of distinct built X" pattern as Shelter/Power/
-  Sanitation/Healthcare, once there's a second habitat or power part to
-  build *more than one of* — right now every category with that pattern
-  has exactly one qualifying part, so "redundancy" and "the thing exists
-  at all" would be the same measurement.
+- **Recovery capability** (Infrastructure Resilience) still needs an actual
+  failure/recovery simulation (something breaking and being repaired) to
+  mean anything real — unlike System redundancy above, "having spares"
+  and "successfully recovering from a failure" aren't the same claim, so
+  this one is still genuinely blocked on a system that doesn't exist yet.
 - **Distribution network reliability** and **Distribution effectiveness /
   access equity** (Accessibility) both need more than one faction/player
   actually playing at once to mean anything — natural to revisit once

@@ -58,6 +58,18 @@ static func _built_availability(state: Dictionary, category: String) -> float:
 	var target = float(BUILT_TARGETS.get(category, 1.0))
 	return clamp(float(built.size()) / target * 100.0, 0.0, 100.0)
 
+## System redundancy: distinct built ships *beyond* BUILT_TARGETS' "just
+## sufficient" count. mark_infrastructure_built() already dedupes by ship
+## id, not part id -- a player who saves 6 differently-named habitat ships
+## already has the data to prove redundancy with the exact same part that
+## exists today, no new part type required. 0 at the base target (that's
+## "sufficient," not "redundant" yet), 100 at 2x the base target.
+static func _redundancy_availability(state: Dictionary, category: String) -> float:
+	var built: Array = state.get("built_infrastructure", {}).get(category, [])
+	var base_target = float(BUILT_TARGETS.get(category, 1.0))
+	var full_redundancy_target = base_target * 2.0
+	return clamp((float(built.size()) - base_target) / (full_redundancy_target - base_target) * 100.0, 0.0, 100.0)
+
 ## Banked amount *beyond* the immediate-use target counts toward reserve
 ## capacity (Infrastructure Resilience) -- e.g. banking 2x the O2 target
 ## means half of it is genuinely spare, not just enough to get by. Scaled
@@ -109,10 +121,15 @@ static func compute(state: Dictionary) -> Dictionary:
 	# stockpile beyond immediate needs is more resilient than one running
 	# exactly at the line, even at the same headline life-support score.
 	var life_support_surplus = (_surplus(resources, "O2") + _surplus(resources, "Potable Water") + _surplus(resources, "Food")) / 3.0
+	# Average redundancy across all four "distinct built ships" categories --
+	# a civilization with backup shelter but zero backup power isn't fully
+	# redundant, so this deliberately can't be carried by just one category.
+	var redundancy = (_redundancy_availability(state, "shelter") + _redundancy_availability(state, "power") \
+		+ _redundancy_availability(state, "sanitation") + _redundancy_availability(state, "healthcare")) / 4.0
 	var infrastructure = _category([
 		{"label": "Reserve capacity (raw + refined materials)", "score": reserve_capacity, "tracked": true},
 		{"label": "Life-support surplus (O2/Water/Food above target)", "score": life_support_surplus, "tracked": true},
-		{"label": "System redundancy", "score": 100.0, "tracked": false},
+		{"label": "System redundancy (2x built ships per category)", "score": redundancy, "tracked": true},
 		{"label": "Recovery capability", "score": 100.0, "tracked": false},
 		{"label": "Distribution network reliability", "score": 100.0, "tracked": false},
 	])
