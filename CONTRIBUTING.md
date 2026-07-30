@@ -126,10 +126,42 @@ genuinely new *shape* (not just new numbers for an existing shape) touches
 `aevoria-simulator/export_presets.cfg` defines the "Windows Desktop" export
 preset. `aevoria-simulator/deploy_to_itch.ps1` does the full release cycle in
 one command: exports a release build, then pushes it to itch.io via
-`butler` (incremental patches only — fast after the first push). Requires
-Godot's export templates to be installed
-(`%APPDATA%\Godot\export_templates\4.6.3.stable\`) and `butler login` to have
-been run once already.
+`butler` (incremental patches only — fast after the first push).
+
+**Committing your changes locally does not update the live download** — the
+itch.io build only moves forward when someone actually runs the deploy
+script below. It's easy to do a whole session of edits, commit them, and
+forget this last step (players still get whatever the last deploy shipped).
+
+1. If you touched anything under `src/` or `cur/` (C++), rebuild the
+   **release** target first:
+   ```bash
+   python -m SCons platform=windows target=template_release -j4
+   ```
+   `deploy_to_itch.ps1` does *not* do this for you — it assumes a current
+   `libaevoria.windows.template_release.x86_64.dll` already exists and will
+   happily export a build with a stale/missing one. Pure GDScript/`.tscn`
+   changes never need this step, since they're read at runtime, not compiled
+   in.
+2. Run the deploy script from the repo root:
+   ```powershell
+   powershell -File aevoria-simulator/deploy_to_itch.ps1
+   ```
+   This exports a fresh "Windows Desktop" release build via Godot's headless
+   `--export-release`, then pushes it to the `windows` channel via
+   `butler push`.
+3. Confirm it actually landed (don't just trust a clean exit code):
+   ```powershell
+   c:\Users\keefe\AppData\Local\butler\butler.exe status aevoria-simulator/aevoria-simulator-per-avia-ad-astra
+   ```
+   Check the build number incremented and the timestamp is recent — that's
+   also exactly what shows up as the version number on the public itch.io
+   page.
+
+One-time setup this depends on (already done on this machine, listed here in
+case you're setting up a new one): Godot's export templates installed
+(`%APPDATA%\Godot\export_templates\4.6.3.stable\`), and `butler login` run
+once (credentials cached at `~/.config/itch/butler_creds`).
 
 ## Common problems and their actual cause
 
