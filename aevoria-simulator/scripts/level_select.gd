@@ -17,10 +17,18 @@ const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCITracker = preload("res://scripts/vci_tracker.gd")
 
+const DEBUG_FACTIONS = [
+	{"id": LevelCatalog.AEVORIA_COMMONWEALTH, "label": "Commonwealth"},
+	{"id": LevelCatalog.OLIGARCH_COMBINE, "label": "Oligarch Combine"},
+	{"id": LevelCatalog.NOMAD_FLOTILLA, "label": "Nomad Flotilla"},
+]
+
 var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
 var _founders_monument: CanvasLayer
 
 func _ready() -> void:
+	if OS.is_debug_build() and LevelContext.debug_faction_override != "":
+		_faction_id = LevelContext.debug_faction_override
 	add_child(HeroBackdrop.new())
 	add_child(ConsoleLogPanel.new())
 	SystemLog.log("Level Select loaded.")
@@ -62,6 +70,9 @@ func _build_ui() -> void:
 	header.text = "AEVORIA COMMONWEALTH — LEVEL SELECT"
 	outer.add_child(header)
 
+	if OS.is_debug_build():
+		outer.add_child(_build_debug_faction_row())
+
 	outer.add_child(HSeparator.new())
 
 	var state = FactionHomeBase.load_state(_faction_id)
@@ -83,6 +94,38 @@ func _build_ui() -> void:
 	outer.add_child(monument_button)
 
 	_build_resources_panel(canvas, state)
+
+## Debug-build-only row of buttons for switching which faction levels
+## launch as -- see level_context.gd's debug_faction_override and the
+## comment on the `faction_id` local in _build_level_card(). Rebuilds the
+## whole scene on change (simplest way to propagate the new faction into
+## every already-built panel/card) rather than trying to patch every
+## affected label in place.
+func _build_debug_faction_row() -> HBoxContainer:
+	var row = HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+
+	var label = Label.new()
+	label.text = "DEBUG FACTION:"
+	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_color_override("font_color", Color(0.95, 0.6, 0.3))
+	row.add_child(label)
+
+	for faction in DEBUG_FACTIONS:
+		var button = Button.new()
+		button.text = faction["label"]
+		button.theme_type_variation = "GlassButton"
+		button.add_theme_font_size_override("font_size", 10)
+		button.disabled = faction["id"] == _faction_id
+		var faction_id = faction["id"]
+		button.pressed.connect(func():
+			LevelContext.debug_faction_override = faction_id
+			SystemLog.log("[DEBUG] Switched faction to %s." % faction_id)
+			get_tree().reload_current_scene()
+		)
+		row.add_child(button)
+
+	return row
 
 func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
 	var panel = PanelContainer.new()
@@ -245,7 +288,12 @@ func _build_level_card(level: Dictionary, state: Dictionary) -> PanelContainer:
 	launch_button.text = "Launch"
 	launch_button.theme_type_variation = "GlassButton"
 	var level_id = level["id"]
-	var faction_id = level["faction_id"]
+	# Debug builds can override which faction a level launches as (see
+	# _build_debug_faction_row()) so the Oligarch Combine/Nomad Flotilla
+	# exclusive hulls in part_catalog.gd are actually reachable for
+	# testing -- every level in level_catalog.gd is Commonwealth-only
+	# today, so in a normal (release) build this is just level["faction_id"].
+	var faction_id = _faction_id if OS.is_debug_build() else level["faction_id"]
 	var scene_path = level["scene_path"]
 	launch_button.pressed.connect(func():
 		LevelContext.start_level(level_id, faction_id)

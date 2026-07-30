@@ -113,6 +113,17 @@ add a new level:
    (`get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn")`) — every
    existing level has one, players have no other way back.
 
+**Testing other factions:** every level in `level_catalog.gd` is flagged
+Commonwealth-only today, but `part_catalog.gd` already has faction-exclusive
+hulls for `OLIGARCH_COMBINE` and `NOMAD_FLOTILLA` (the tube rocket and
+drift hull) with no normal way to reach them in a playthrough. Debug
+builds (`OS.is_debug_build()`) get a "DEBUG FACTION" button row at the
+top of Level Select (`level_select.gd`'s `_build_debug_faction_row()`)
+that overrides which faction levels launch as, purely for testing/demo
+purposes — it does nothing in a release export, and doesn't add any real
+faction-select gameplay (see `docs/MULTIPLAYER_ROADMAP.md`/the "spheres
+of influence" note in README.md for where that's actually headed).
+
 **Known gap, deliberately deferred:** most levels are still a plain gray
 background with a camera/light and a UI panel — no real 3D scene dressing.
 The plan (as of 2026-07-29) is to flesh out VCI tracking first (see
