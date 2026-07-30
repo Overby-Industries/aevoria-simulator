@@ -25,6 +25,13 @@ Write-Host "Exporting release build..."
 & $GodotExe --headless --export-release "Windows Desktop" $BuildExe
 if ($LASTEXITCODE -ne 0) { throw "Godot export failed with exit code $LASTEXITCODE" }
 
+# Godot's export only ever writes the .exe/.dll -- copy this in every time
+# rather than relying on it surviving in $BuildDir between runs, so players
+# extracting the zip have a one-click way to get a desktop icon (the
+# executable itself now has a real icon as of the Ascending Arc emblem
+# commit, but Windows still won't put a shortcut anywhere on its own).
+Copy-Item (Join-Path $PSScriptRoot "packaging\Create Desktop Shortcut.bat") $BuildDir -Force
+
 Write-Host "Pushing to itch.io ($ItchTarget)..."
 & $ButlerExe push $BuildDir $ItchTarget
 if ($LASTEXITCODE -ne 0) { throw "butler push failed with exit code $LASTEXITCODE" }
