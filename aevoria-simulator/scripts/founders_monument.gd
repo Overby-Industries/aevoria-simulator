@@ -78,9 +78,10 @@ func _build_ui():
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.LayoutPresetMode.PRESET_MODE_MINSIZE)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel.theme_type_variation = "GlassPanelFrame"
 	add_child(_panel)
 
-	var glass = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.75))
+	var glass = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.75), 1.0)
 	_panel.add_child(glass)
 
 	var outer = VBoxContainer.new()
@@ -119,5 +120,6 @@ func _build_ui():
 
 	var close_button = Button.new()
 	close_button.text = "Close"
+	close_button.theme_type_variation = "GlassButton"
 	close_button.pressed.connect(func(): visible = false)
 	outer.add_child(close_button)

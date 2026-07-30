@@ -43,9 +43,10 @@ func _build_ui():
 	# up-and-left from the anchor. Force it explicitly.
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_panel.theme_type_variation = "GlassPanelFrame"
 	add_child(_panel)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))
+	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	_panel.add_child(bg)
 
 	var outer = VBoxContainer.new()
@@ -78,6 +79,7 @@ func _build_ui():
 
 	var login_button = Button.new()
 	login_button.text = "Log In"
+	login_button.theme_type_variation = "GlassButton"
 	login_button.pressed.connect(_on_login_pressed)
 	_logged_out_box.add_child(login_button)
 
@@ -100,6 +102,7 @@ func _build_ui():
 
 	var refresh_button = Button.new()
 	refresh_button.text = "Refresh"
+	refresh_button.theme_type_variation = "GlassButton"
 	refresh_button.add_theme_font_size_override("font_size", 10)
 	refresh_button.pressed.connect(func(): AevoriaAuth.fetch_owned_skins())
 	skins_header_row.add_child(refresh_button)
@@ -113,6 +116,7 @@ func _build_ui():
 
 	var logout_button = Button.new()
 	logout_button.text = "Log Out"
+	logout_button.theme_type_variation = "GlassButton"
 	logout_button.pressed.connect(AevoriaAuth.logout)
 	_logged_in_box.add_child(logout_button)
 
@@ -121,6 +125,7 @@ func _build_ui():
 	outer.add_child(HSeparator.new())
 	var exit_button = Button.new()
 	exit_button.text = "Exit Game"
+	exit_button.theme_type_variation = "GlassButton"
 	exit_button.pressed.connect(func(): get_tree().quit())
 	outer.add_child(exit_button)
 

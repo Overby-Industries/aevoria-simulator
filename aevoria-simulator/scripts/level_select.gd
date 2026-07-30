@@ -12,11 +12,13 @@ const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const GlassPanel = preload("res://scripts/glass_panel.gd")
 const FoundersMonument = preload("res://scripts/founders_monument.gd")
+const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 
 var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
 var _founders_monument: CanvasLayer
 
 func _ready() -> void:
+	add_child(HeroBackdrop.new())
 	_build_ui()
 	# Shown automatically on the game's front door (see founders_monument.gd);
 	# the "Admire" button below reopens it any time after this first look.
@@ -29,12 +31,13 @@ func _build_ui() -> void:
 
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
+	panel.theme_type_variation = "GlassPanelFrame"
 	panel.custom_minimum_size = Vector2(420, 0)
 	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	panel.position = Vector2(20, 20)
 	canvas.add_child(panel)
 
-	var panel_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))
+	var panel_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	panel.add_child(panel_bg)
 
 	# The level roster no longer fits a fixed-height window now that
@@ -64,11 +67,13 @@ func _build_ui() -> void:
 
 	var sandbox_button = Button.new()
 	sandbox_button.text = "Open Sandbox / Dev Demos"
+	sandbox_button.theme_type_variation = "GlassButton"
 	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
 	outer.add_child(sandbox_button)
 
 	var monument_button = Button.new()
 	monument_button.text = "Admire the Founders Monument"
+	monument_button.theme_type_variation = "GlassButton"
 	monument_button.pressed.connect(func(): _founders_monument.show_monument())
 	outer.add_child(monument_button)
 
@@ -87,9 +92,10 @@ func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
 	# minimum-size rect off the edge of the screen instead of leftward
 	# from the anchor. Force it explicitly.
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.theme_type_variation = "GlassPanelFrame"
 	canvas.add_child(panel)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.45))
+	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	panel.add_child(bg)
 
 	var inner = VBoxContainer.new()
@@ -144,8 +150,7 @@ func _build_level_card(level: Dictionary, state: Dictionary) -> PanelContainer:
 
 	var launch_button = Button.new()
 	launch_button.text = "Launch"
-	if is_governance:
-		launch_button.theme_type_variation = "AevoriaButton"
+	launch_button.theme_type_variation = "AevoriaButton" if is_governance else "GlassButton"
 	var level_id = level["id"]
 	var faction_id = level["faction_id"]
 	var scene_path = level["scene_path"]
