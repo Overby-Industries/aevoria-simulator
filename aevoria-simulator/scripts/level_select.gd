@@ -6,19 +6,23 @@ extends Node
 ## (account_panel.gd / AccountHud) is declared as a sibling node in
 ## LevelSelect.tscn so it's available from the hub too. Docked top-left;
 ## the resource/status readout is a separate small panel docked top-right,
-## and the account panel (with Exit Game) docks bottom-right.
+## the account panel (with Exit Game) docks bottom-right, and the system
+## log (console_log_panel.gd) docks bottom-left.
 
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const GlassPanel = preload("res://scripts/glass_panel.gd")
 const FoundersMonument = preload("res://scripts/founders_monument.gd")
 const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
+const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 
 var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
 var _founders_monument: CanvasLayer
 
 func _ready() -> void:
 	add_child(HeroBackdrop.new())
+	add_child(ConsoleLogPanel.new())
+	SystemLog.log("Level Select loaded.")
 	_build_ui()
 	# Shown automatically on the game's front door (see founders_monument.gd);
 	# the "Admire" button below reopens it any time after this first look.

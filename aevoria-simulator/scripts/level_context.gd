@@ -23,5 +23,12 @@ func finish_current_level(reward: Dictionary = {}) -> void:
 	FactionHomeBase.mark_level_complete(current_faction_id, current_level_id)
 	for resource_name in reward.keys():
 		FactionHomeBase.add_resource(current_faction_id, resource_name, float(reward[resource_name]))
+	if reward.is_empty():
+		SystemLog.log("Level complete: %s." % current_level_id)
+	else:
+		var parts: Array = []
+		for resource_name in reward.keys():
+			parts.append("+%.1f %s" % [float(reward[resource_name]), resource_name])
+		SystemLog.log("Level complete: %s (%s)." % [current_level_id, ", ".join(parts)])
 	level_finished.emit(current_level_id)
 	current_level_id = ""

@@ -17,6 +17,7 @@ config/icon="res://icon.png"
 
 [autoload]
 
+SystemLog="*res://scripts/system_log.gd"
 ThemeBootstrap="*res://scripts/theme_bootstrap.gd"
 AevoriaAuth="*res://scripts/aevoria_auth.gd"
 LevelContext="*res://scripts/level_context.gd"
