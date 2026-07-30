@@ -3,7 +3,10 @@ extends CanvasLayer
 ## Logs the player into the same Commonwealth account they use on the web
 ## marketplace (via the AevoriaAuth autoload) and shows what they own --
 ## closing the loop between buying a skin on the web and actually having
-## it here. Built in code, matching cur_fsm_display.gd's pattern.
+## it here. Built in code, matching cur_fsm_display.gd's pattern. Docked to
+## the bottom-right of the screen; the game's Exit button lives here too.
+
+const GlassPanel = preload("res://scripts/glass_panel.gd")
 
 var _panel: PanelContainer
 var _logged_out_box: VBoxContainer
@@ -29,11 +32,21 @@ func _build_ui():
 	_panel = PanelContainer.new()
 	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(280, 0)
-	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_panel.position = Vector2(20, 240)
+	# A real anchor (not a one-off position computed from today's window
+	# size) -- PRESET_MODE_MINSIZE keeps the panel pinned to the
+	# bottom-right corner, 20px in, and Godot recomputes that on every
+	# resize automatically, including toggling fullscreen.
+	_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	# The preset alone leaves grow direction at its default (END, i.e.
+	# grows further right/down) -- for a bottom-right-docked panel that
+	# grows the minimum-size rect off the edge of the screen instead of
+	# up-and-left from the anchor. Force it explicitly.
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_panel.theme_type_variation = "GlassPanelFrame"
 	add_child(_panel)
 
-	var bg = _make_glass_background(Color(0.05, 0.08, 0.15, 0.45))
+	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	_panel.add_child(bg)
 
 	var outer = VBoxContainer.new()
@@ -66,6 +79,7 @@ func _build_ui():
 
 	var login_button = Button.new()
 	login_button.text = "Log In"
+	login_button.theme_type_variation = "GlassButton"
 	login_button.pressed.connect(_on_login_pressed)
 	_logged_out_box.add_child(login_button)
 
@@ -77,10 +91,21 @@ func _build_ui():
 	_account_label.add_theme_font_size_override("font_size", 12)
 	_logged_in_box.add_child(_account_label)
 
+	var skins_header_row = HBoxContainer.new()
+	_logged_in_box.add_child(skins_header_row)
+
 	var skins_header = Label.new()
 	skins_header.text = "MY SKINS"
 	skins_header.add_theme_font_size_override("font_size", 12)
-	_logged_in_box.add_child(skins_header)
+	skins_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	skins_header_row.add_child(skins_header)
+
+	var refresh_button = Button.new()
+	refresh_button.text = "Refresh"
+	refresh_button.theme_type_variation = "GlassButton"
+	refresh_button.add_theme_font_size_override("font_size", 10)
+	refresh_button.pressed.connect(func(): AevoriaAuth.fetch_owned_skins())
+	skins_header_row.add_child(refresh_button)
 
 	var skins_scroll = ScrollContainer.new()
 	skins_scroll.custom_minimum_size = Vector2(0, 100)
@@ -91,21 +116,18 @@ func _build_ui():
 
 	var logout_button = Button.new()
 	logout_button.text = "Log Out"
+	logout_button.theme_type_variation = "GlassButton"
 	logout_button.pressed.connect(AevoriaAuth.logout)
 	_logged_in_box.add_child(logout_button)
 
-func _make_glass_background(tint: Color) -> ColorRect:
-	var bg = ColorRect.new()
-	bg.color = Color(1, 1, 1, 1)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var shader: Shader = load("res://shaders/frosted_glass_panel.gdshader")
-	var mat = ShaderMaterial.new()
-	mat.shader = shader
-	mat.set_shader_parameter("blur_amount", 2.0)
-	mat.set_shader_parameter("tint_color", tint)
-	bg.material = mat
-	return bg
+	# Outside both boxes so it's visible whether or not the player is
+	# logged in -- exiting the game shouldn't require an account.
+	outer.add_child(HSeparator.new())
+	var exit_button = Button.new()
+	exit_button.text = "Exit Game"
+	exit_button.theme_type_variation = "GlassButton"
+	exit_button.pressed.connect(func(): get_tree().quit())
+	outer.add_child(exit_button)
 
 func _refresh_state():
 	var logged_in = AevoriaAuth.is_logged_in()
@@ -141,11 +163,87 @@ func _on_skins_fetched(purchases: Array):
 		_skins_vbox.add_child(empty_label)
 		return
 	for purchase in purchases:
+		# A Tier 1 (first-party store) purchase has no skin_id, so the
+		# embedded "skins" join comes back as an explicit JSON null rather
+		# than a missing key -- .get()'s default only covers the latter.
 		var skin = purchase.get("skins", {})
+		if skin == null:
+			skin = {}
+
+		var row = HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_skins_vbox.add_child(row)
+
+		var thumb = TextureRect.new()
+		thumb.custom_minimum_size = Vector2(20, 20)
+		thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		thumb.stretch_mode = TextureRect.STRETCH_SCALE
+		row.add_child(thumb)
+
 		var label = Label.new()
-		label.text = "- %s" % skin.get("title", "(untitled)")
+		label.text = "- %s" % skin.get("title", "(store item)")
 		label.add_theme_font_size_override("font_size", 11)
-		_skins_vbox.add_child(label)
+		row.add_child(label)
+
+		# Procedural skins have no storage_path (see 0005_skin_recipes.sql
+		# in web/supabase/migrations) -- preview_image_path is their only
+		# image. An uploaded file skin's own storage_path is used only if
+		# it's actually an image (could be a non-image 3D asset instead),
+		# matching the exact same fallback the web marketplace page uses.
+		var image_extensions = [".png", ".jpg", ".jpeg", ".webp"]
+		var storage_path = skin.get("storage_path")
+		var is_image = storage_path != null and image_extensions.any(
+			func(ext): return storage_path.to_lower().ends_with(ext)
+		)
+		var preview_path = storage_path if is_image else skin.get("preview_image_path")
+		if preview_path != null:
+			_load_skin_thumbnail(thumb, preview_path)
 
 func _on_skins_fetch_failed(message: String):
 	_status_label.text = message
+
+# The "skins" storage bucket is private (see 0001_init.sql), so a plain
+# public URL won't work -- has to go through Supabase's sign endpoint
+# first, same as web/app/(app)/marketplace/page.tsx does server-side.
+# Each thumbnail gets its own throwaway HTTPRequest pair (sign, then
+# download) since several can be in flight at once for a longer skins list.
+func _load_skin_thumbnail(thumb: TextureRect, path: String) -> void:
+	var sign_request = HTTPRequest.new()
+	add_child(sign_request)
+	var sign_url = "%s/storage/v1/object/sign/skins/%s" % [AevoriaAuth.SUPABASE_URL, path]
+	var headers = [
+		"apikey: %s" % AevoriaAuth.SUPABASE_ANON_KEY,
+		"Authorization: Bearer %s" % AevoriaAuth.access_token,
+		"Content-Type: application/json",
+	]
+	var body = JSON.stringify({"expiresIn": 600})
+	sign_request.request_completed.connect(func(_result, response_code, _resp_headers, resp_body):
+		sign_request.queue_free()
+		if response_code != 200:
+			return
+		var data = JSON.parse_string(resp_body.get_string_from_utf8())
+		if not (data is Dictionary) or not data.has("signedURL"):
+			return
+		_download_skin_thumbnail(thumb, "%s/storage/v1%s" % [AevoriaAuth.SUPABASE_URL, data["signedURL"]])
+	)
+	sign_request.request(sign_url, headers, HTTPClient.METHOD_POST, body)
+
+func _download_skin_thumbnail(thumb: TextureRect, image_url: String) -> void:
+	var image_request = HTTPRequest.new()
+	add_child(image_request)
+	image_request.request_completed.connect(func(_result, response_code, _resp_headers, image_bytes):
+		image_request.queue_free()
+		if response_code != 200:
+			return
+		var image = Image.new()
+		# Try each format in turn -- the response has no reliable
+		# extension to key off (it's a signed URL, not a file path).
+		var loaded = (
+			image.load_png_from_buffer(image_bytes) == OK
+			or image.load_jpg_from_buffer(image_bytes) == OK
+			or image.load_webp_from_buffer(image_bytes) == OK
+		)
+		if loaded:
+			thumb.texture = ImageTexture.create_from_image(image)
+	)
+	image_request.request(image_url, [], HTTPClient.METHOD_GET)

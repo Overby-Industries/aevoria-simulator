@@ -50,21 +50,31 @@ nose cone + a mirrored pair of swept delta wings, all in one composite part.
 ```gdscript
 {
     "shape": "winged_fuselage",
-    "radius": 0.55,             # body radius
-    "height": 3.6,              # body length (the capsule's long axis is Y)
-    "nose_length": 0.8,         # how far the nose cone extends past the body
-    "nose_tip_radius": 0.04,    # ~0 = sharp point; bigger = a blunter nose
-    "wing_span": 1.8,           # how far each wing extends from the centerline
-    "wing_root_chord": 1.7,     # length of the wing where it meets the fuselage
-    "wing_tip_sweep": 1.5,      # how far back the wingtip is swept vs. the root
-    "wing_thickness": 0.1,      # wing thickness (keep this small -- it's a wedge, not a slab)
-    "wing_y_offset": -0.3,      # where along the body the wings attach (0 = center, negative = toward the tail)
+    "radius": 2.7,              # body radius (meters)
+    "height": 36.58,            # body length -- 120ft, the capsule's long axis is Y
+    "nose_length": 4.5,         # how far the nose cone extends past the body
+    "nose_tip_radius": 0.15,    # ~0 = sharp point; bigger = a blunter nose
+    "wing_span": 15.24,         # how far each wing extends from the centerline -- half of the 100ft total wingspan
+    "wing_root_chord": 12.0,    # length of the wing where it meets the fuselage
+    "wing_tip_sweep": 12.7,     # how far back the wingtip is swept vs. the root
+    "wing_thickness": 0.6,      # wing thickness (keep this small relative to chord -- it's a wedge, not a slab)
+    "wing_y_offset": -3.05,     # where along the body the wings attach (0 = center, negative = toward the tail)
 }
 ```
 All nine keys are plain floats — this is the one to reach for if you want to
 change the SSTO's proportions yourself (`ssto_hull_helga` in
 `part_catalog.gd`). **No rebuild needed** — this whole shape is driven by
 data, even though the shape-*builder* itself is C++.
+
+**Scale convention: 1 Godot unit = 1 meter.** Every hull and accessory in
+`part_catalog.gd` is sized to real-world aerospace proportions (Helga's
+36.58m/30.48m fuselage/wingspan above is the anchor the rest of the catalog
+is sized against). If you add a new part, size it in meters consistently
+with the rest of the catalog rather than picking an arbitrary small number
+— and if it's a root hull meant to carry other parts, remember the camera
+in `assembly_bay.gd`/`parts-demo.gd` auto-frames on the assembled ship's
+actual bounding box (`camera_framing.gd`), so an unrealistically large or
+tiny part will visibly throw off the framing rather than silently working.
 
 ### Where the actual ship definitions live
 
@@ -188,6 +198,128 @@ Two calling conventions exist and it matters which one you're in:
   rocket's gunmetal-and-brass, the drift hull's rust) is defined, applied
   automatically in `assembly_bay.gd` when you pick that hull.
 
+## System 4: The game's front door (starfield, hero backdrop, lens flares)
+
+Everything LevelSelect shows behind its glass UI panels — the starfield, the
+rotating torus+cone hull silhouette, the distant sun, and its lens flares —
+is built in code by `hero_backdrop.gd`, instantiated once from
+`level_select.gd`'s `_ready()`. Same philosophy as the rest of this doc: pure
+GDScript, **never needs a rebuild**, and every knob is a plain constant or
+dictionary near the top of the file.
+
+### Starfield
+
+`starfield.gd`, one static method: `Starfield.spawn(parent, radius=90.0)`.
+It's a `GPUParticles3D` scattered across a sphere around the camera, zero
+velocity (the stars don't move). To change star count or spread, edit
+`particles.amount` or the `radius` argument in `starfield.gd`.
+
+### The rotating hull silhouette
+
+`hero_backdrop.gd::_build_object()` builds a `TorusMesh` + a tapered
+`CylinderMesh` ("cone" — `top_radius` near 0), parented under `_rotator`,
+which spins slowly in `_process()`:
+```gdscript
+_rotator.rotate_y(delta * 0.15)   # spin speed around the vertical axis
+_rotator.rotate_x(delta * 0.04)   # a slower tumble on the other axis
+```
+Resize the ring/cone by changing `torus.inner_radius`/`outer_radius` or
+`cone.bottom_radius`/`height` in that same function. Its material comes from
+`_hull_material()` — change `COLOR_HULL` at the top of the file to recolor it.
+
+### Space background and glow
+
+`_build_environment()` builds a `WorldEnvironment` — `env.background_color`
+is the near-black space color; `env.glow_intensity`/`glow_bloom`/
+`glow_hdr_threshold` control how strongly bright things (like the sun below)
+bloom. This bloom is what turns a plain bright sphere into something that
+actually reads as a light source instead of a flat bright dot.
+
+### The sun and its lens flares
+
+This is the part worth understanding in detail if you want to tune it:
+
+- **`SUN_POSITION`** (top of `hero_backdrop.gd`) is a hand-placed `Vector3`,
+  chosen by eye relative to the *fixed* camera set up in `_build_camera()`
+  (position `(5, 2.5, 12)`, looking at the origin). The camera never moves in
+  this scene — only the hull silhouette rotates — so a fixed world position
+  for the sun is enough. **If you ever make the camera move, this whole rig
+  needs to switch to tracking a moving light instead**, since nothing here
+  recomputes SUN_POSITION relative to a moving viewpoint.
+- The sun's own brightness/color comes from `_build_sun()`'s
+  `StandardMaterial3D.emission` / `emission_energy_multiplier` — this is what
+  the glow effect above actually blooms.
+- **Round flare "ghosts"** — `FLARE_SPECS`, a list of dictionaries:
+  ```gdscript
+  {"t": 0.6, "scale": 0.14, "color": Color(0.6, 0.8, 1.0, 0.3)}
+  ```
+  `t` places the ghost along the line from the sun's on-screen position
+  through the screen center: `t=0` sits right on the sun, `t=1` sits at
+  screen center, `t>1` lands on the opposite side of the screen — this is
+  the standard real-lens-flare-ghost technique. `scale` is the ghost's size;
+  `color`'s alpha is its intensity.
+- **Anamorphic streaks** (the horizontal blue bars, added on request to get
+  the classic sci-fi look) — `STREAK_SPECS`, same idea but `width`/`height`
+  instead of `scale`:
+  ```gdscript
+  {"t": 0.0, "width": 640.0, "height": 8.0, "color": Color(0.55, 0.78, 1.0, 0.8)}
+  ```
+  These reuse the exact same round gradient texture as the ghosts above —
+  there's no separate streak texture. A `TextureRect`'s default stretch mode
+  fills whatever rect size it's given, ignoring aspect ratio, so a circle
+  squashed into a wide-short rect *becomes* a horizontal streak for free.
+  All the current streaks sit at `t=0` (directly on the sun), since that's
+  where a real anamorphic streak originates — unlike the round ghosts, which
+  are meant to trail toward screen center.
+- Everything auto-hides when the sun is off-screen or behind the camera
+  (`_update_lens_flare()`) — you don't need to handle visibility yourself
+  when adding a new entry to either list.
+
+**Worked example: add a second, teal-tinted streak** — one line in
+`STREAK_SPECS`:
+```gdscript
+{"t": 0.0, "width": 500.0, "height": 14.0, "color": Color(0.3, 0.9, 0.85, 0.2)}
+```
+
+**Worked example: add a ghost further past screen center** — one line in
+`FLARE_SPECS`:
+```gdscript
+{"t": 2.0, "scale": 0.2, "color": Color(0.8, 0.5, 1.0, 0.15)}
+```
+
+## System 5: The glass/amber UI theme
+
+The frosted-glass panels and amber-outlined buttons used across
+LevelSelect, AccountHud, and the Founders Monument are two `Theme` type
+variations, built in `theme_builder.gd`:
+
+- **`GlassPanelFrame`** — a `PanelContainer` variation with a fully
+  transparent background and a thin amber border. It's transparent on
+  purpose: the *actual* background is a separate `ColorRect` child (see
+  below) whose shader blurs whatever 3D scene is behind it — an opaque
+  panel stylebox would defeat that.
+- **`GlassButton`** — a `Button` variation: near-transparent amber wash,
+  amber text, brightens on hover.
+- Both read their color from **`COLOR_ACCENT_AMBER`** at the top of
+  `theme_builder.gd` — change that one constant to re-theme every glass
+  panel/button in the project at once.
+
+To make a new panel use this look:
+```gdscript
+const GlassPanel = preload("res://scripts/glass_panel.gd")
+
+panel.theme_type_variation = "GlassPanelFrame"
+var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)  # tint, inset (px)
+panel.add_child(bg)
+```
+`inset` should roughly match the border width (1px currently) so the
+frosted-glass shader doesn't paint over the panel's own border. `tint`'s
+alpha controls how strongly the glass darkens what's behind it — every
+panel today uses ~0.3-0.35; raise it for a panel with dense text that needs
+more contrast, lower it for something that should read as more see-through.
+
+To make a new button match: `button.theme_type_variation = "GlassButton"`.
+
 ## Quick recipe: "I want to change X"
 
 - **"Make the SSTO's wings bigger"** → `part_catalog.gd`, `ssto_hull.mesh_recipe`,
@@ -202,3 +334,15 @@ Two calling conventions exist and it matters which one you're in:
 - **"I want an entirely new hull shape, not just different numbers"** →
   new branch in `src/part_definition.cpp`'s `build_mesh_node()`. Rebuild required
   (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+- **"Move the sun/lens flares on the level-select screen"** →
+  `hero_backdrop.gd`, `SUN_POSITION`. No rebuild.
+- **"Add another lens-flare ghost or anamorphic streak"** →
+  `hero_backdrop.gd`, `FLARE_SPECS` (round ghosts) or `STREAK_SPECS`
+  (horizontal streaks). No rebuild.
+- **"Make the level-select space background lighter/darker"** →
+  `hero_backdrop.gd`, `_build_environment()`'s `env.background_color`. No rebuild.
+- **"Change the accent color used by every glass panel/button"** →
+  `theme_builder.gd`, `COLOR_ACCENT_AMBER`. No rebuild.
+- **"Make a new panel or button match the glass/amber look"** → set
+  `theme_type_variation = "GlassPanelFrame"` (panels, plus a
+  `GlassPanel.make()` background child) or `"GlassButton"` (buttons). No rebuild.

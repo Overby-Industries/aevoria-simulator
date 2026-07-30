@@ -29,6 +29,8 @@ static func build() -> Theme:
 	_build_overby_console(theme)
 	_build_aevoria_civil(theme)
 	_build_glass_resource_slab(theme)
+	_build_glass_panel_frame(theme)
+	_build_glass_button(theme)
 
 	return theme
 
@@ -111,3 +113,51 @@ static func _build_glass_resource_slab(theme: Theme) -> void:
 	slab.set_content_margin_all(10)
 	theme.set_type_variation("GlassResourceSlab", "PanelContainer")
 	theme.set_stylebox("panel", "GlassResourceSlab", slab)
+
+## The frame for panels whose real background is glass_panel.gd's frosted
+## shader (which blurs whatever 3D scene is behind it -- see
+## hero_backdrop.gd) rather than a flat theme color. bg_color is fully
+## transparent here on purpose: painting any opaque color first would
+## defeat the shader's screen-texture read. Only a thin amber outline
+## remains, so the panel still reads as a distinct card.
+static func _build_glass_panel_frame(theme: Theme) -> void:
+	var frame = StyleBoxFlat.new()
+	frame.bg_color = Color(0, 0, 0, 0)
+	frame.border_width_left = 1
+	frame.border_width_top = 1
+	frame.border_width_right = 1
+	frame.border_width_bottom = 1
+	frame.border_color = Color(COLOR_ACCENT_AMBER.r, COLOR_ACCENT_AMBER.g, COLOR_ACCENT_AMBER.b, 0.4)
+	frame.set_corner_radius_all(6)
+	frame.set_content_margin_all(14)
+	theme.set_type_variation("GlassPanelFrame", "PanelContainer")
+	theme.set_stylebox("panel", "GlassPanelFrame", frame)
+	theme.set_color("font_color", "GlassPanelFrame", COLOR_TEXT_LIGHT)
+
+## The amber-glass button look requested to match the web app's sci-fi
+## feel: a near-transparent amber wash instead of a flat panel color, so
+## the frosted scene behind still reads through, with amber text instead
+## of white/light-gray.
+static func _build_glass_button(theme: Theme) -> void:
+	var btn_normal = StyleBoxFlat.new()
+	btn_normal.bg_color = Color(COLOR_ACCENT_AMBER.r, COLOR_ACCENT_AMBER.g, COLOR_ACCENT_AMBER.b, 0.08)
+	btn_normal.border_width_left = 1
+	btn_normal.border_width_top = 1
+	btn_normal.border_width_right = 1
+	btn_normal.border_width_bottom = 1
+	btn_normal.border_color = Color(COLOR_ACCENT_AMBER.r, COLOR_ACCENT_AMBER.g, COLOR_ACCENT_AMBER.b, 0.5)
+	btn_normal.set_corner_radius_all(4)
+	btn_normal.set_content_margin_all(8)
+	var btn_hover = btn_normal.duplicate()
+	btn_hover.bg_color = Color(COLOR_ACCENT_AMBER.r, COLOR_ACCENT_AMBER.g, COLOR_ACCENT_AMBER.b, 0.18)
+	btn_hover.border_color = COLOR_ACCENT_AMBER
+	var btn_pressed = btn_normal.duplicate()
+	btn_pressed.bg_color = Color(COLOR_ACCENT_AMBER.r, COLOR_ACCENT_AMBER.g, COLOR_ACCENT_AMBER.b, 0.28)
+	btn_pressed.border_color = COLOR_ACCENT_AMBER
+	theme.set_type_variation("GlassButton", "Button")
+	theme.set_stylebox("normal", "GlassButton", btn_normal)
+	theme.set_stylebox("hover", "GlassButton", btn_hover)
+	theme.set_stylebox("pressed", "GlassButton", btn_pressed)
+	theme.set_color("font_color", "GlassButton", COLOR_ACCENT_AMBER)
+	theme.set_color("font_hover_color", "GlassButton", Color.WHITE)
+	theme.set_color("font_pressed_color", "GlassButton", COLOR_ACCENT_AMBER)

@@ -64,6 +64,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       creator_payout_cents: 0,
       stripe_product_id: session.metadata?.stripe_product_id ?? null,
       stripe_price_id: session.metadata?.stripe_price_id ?? null,
+      product_name: session.metadata?.product_name ?? null,
     };
   } else if (kind === "tier2_skin_purchase") {
     const skinId = session.metadata?.skin_id;

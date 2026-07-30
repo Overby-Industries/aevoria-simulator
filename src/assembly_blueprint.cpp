@@ -14,6 +14,8 @@ void AssemblyBlueprint::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_attachments"), &AssemblyBlueprint::get_attachments);
     ClassDB::bind_method(D_METHOD("set_skin_recipe", "recipe"), &AssemblyBlueprint::set_skin_recipe);
     ClassDB::bind_method(D_METHOD("get_skin_recipe"), &AssemblyBlueprint::get_skin_recipe);
+    ClassDB::bind_method(D_METHOD("set_decal_path", "path"), &AssemblyBlueprint::set_decal_path);
+    ClassDB::bind_method(D_METHOD("get_decal_path"), &AssemblyBlueprint::get_decal_path);
     ClassDB::bind_method(D_METHOD("to_json"), &AssemblyBlueprint::to_json);
     ClassDB::bind_static_method("AssemblyBlueprint", D_METHOD("from_json", "json_text"), &AssemblyBlueprint::from_json);
 
@@ -21,6 +23,7 @@ void AssemblyBlueprint::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "root_part_id"), "set_root_part_id", "get_root_part_id");
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "attachments"), "set_attachments", "get_attachments");
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "skin_recipe"), "set_skin_recipe", "get_skin_recipe");
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "decal_path"), "set_decal_path", "get_decal_path");
 }
 
 AssemblyBlueprint::AssemblyBlueprint() {}
@@ -38,12 +41,16 @@ Array AssemblyBlueprint::get_attachments() const { return attachments; }
 void AssemblyBlueprint::set_skin_recipe(const Dictionary &p_recipe) { skin_recipe = p_recipe; }
 Dictionary AssemblyBlueprint::get_skin_recipe() const { return skin_recipe; }
 
+void AssemblyBlueprint::set_decal_path(const String &p_path) { decal_path = p_path; }
+String AssemblyBlueprint::get_decal_path() const { return decal_path; }
+
 String AssemblyBlueprint::to_json() const {
     Dictionary root;
     root["ship_id"] = ship_id;
     root["root_part_id"] = root_part_id;
     root["attachments"] = attachments;
     root["skin_recipe"] = skin_recipe;
+    root["decal_path"] = decal_path;
     return JSON::stringify(root, "  ");
 }
 
@@ -61,5 +68,6 @@ Ref<AssemblyBlueprint> AssemblyBlueprint::from_json(const String &json_text) {
     blueprint->set_root_part_id(root.get("root_part_id", ""));
     blueprint->set_attachments(root.get("attachments", Array()));
     blueprint->set_skin_recipe(root.get("skin_recipe", Dictionary()));
+    blueprint->set_decal_path(root.get("decal_path", ""));
     return blueprint;
 }

@@ -8,6 +8,8 @@ extends Node3D
 ## needing any incremental attach/detach API on the C++ side.
 
 const PartCatalog = preload("res://scripts/part_catalog.gd")
+const CameraFraming = preload("res://scripts/camera_framing.gd")
+const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var camera: Camera3D = $Camera3D
@@ -30,6 +32,7 @@ var _finish_button: Button
 var _skins_vbox: VBoxContainer
 var _skins_status_label: Label
 var _back_button: Button
+var _active_special_effect: String = ""
 
 func _ready():
 	_catalog = PartCatalog.build_demo_catalog()
@@ -61,6 +64,7 @@ func _start_new_blueprint(root_part_id: String, ship_id: String):
 	}
 	if suggested != null:
 		_blueprint.skin_recipe["seed"] = randi() % 100000
+	_active_special_effect = ""
 	_selected_socket_index = -1
 	_status_label.text = ""
 	_refresh_all()
@@ -105,8 +109,47 @@ func _rebuild_preview():
 		_preview_node.queue_free()
 	_preview_node = assembler.assemble(_blueprint)
 	add_child(_preview_node)
+	if _active_special_effect == "zero_waste_exhaust":
+		_spawn_exhaust_effect()
 	camera.make_current()
-	camera.look_at(_preview_node.global_position, Vector3.UP)
+	CameraFraming.frame(camera, [_preview_node])
+
+# The Stardust Vanguard Livery Pack's "zero-waste" particle exhaust --
+# purely cosmetic, so it's handled here in GDScript rather than added to
+# AssemblyBlueprint/PartAssembler. Positioned at the root hull's "aft"
+# socket (the same point thrusters attach to) so it reads as engine
+# exhaust regardless of which hull is currently selected.
+func _spawn_exhaust_effect():
+	var root_part: PartDefinition = _catalog_by_id.get(_blueprint.root_part_id)
+	if root_part == null:
+		return
+	var aft_socket = root_part.find_socket("aft")
+	if aft_socket.is_empty():
+		return
+
+	var particles = GPUParticles3D.new()
+	particles.position = aft_socket["position"]
+	particles.amount = 40
+	particles.lifetime = 1.2
+	particles.emitting = true
+
+	var mesh = SphereMesh.new()
+	mesh.radius = 0.3
+	mesh.height = 0.6
+	particles.draw_pass_1 = mesh
+
+	var process_material = ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0, 0, 1)  # "aft" is +Z in this project's socket convention
+	process_material.spread = 12.0
+	process_material.initial_velocity_min = 6.0
+	process_material.initial_velocity_max = 10.0
+	process_material.gravity = Vector3.ZERO
+	process_material.scale_min = 0.5
+	process_material.scale_max = 1.0
+	process_material.color = Color(0.6, 0.9, 1.0, 0.55)
+	particles.process_material = process_material
+
+	_preview_node.add_child(particles)
 
 # --- UI construction (built in code, matching cur_fsm_display.gd's pattern) -
 
@@ -345,15 +388,39 @@ func _on_skins_fetched(purchases: Array):
 		return
 
 	_skins_status_label.text = "Pick one of your purchased skins:"
+	var any_shown = false
 	for purchase in purchases:
+		# A Tier 1 (first-party store) purchase has no skin_id, so the
+		# embedded "skins" join comes back as an explicit JSON null rather
+		# than a missing key -- .get()'s default only covers the latter.
 		var skin = purchase.get("skins", {})
+		if skin == null:
+			skin = {}
 		var recipe = skin.get("recipe")
-		if typeof(recipe) != TYPE_DICTIONARY:
+		if typeof(recipe) == TYPE_DICTIONARY:
+			var button = Button.new()
+			button.text = skin.get("title", "(untitled)")
+			button.pressed.connect(func(): _apply_owned_skin(recipe))
+			_skins_vbox.add_child(button)
+			any_shown = true
+			continue
+
+		# Not a Tier 2 marketplace skin -- check if it's a Tier 1 store
+		# item with a known fixed reward (see tier1_skin_catalog.gd).
+		var product_name = purchase.get("product_name")
+		if product_name == null:
+			continue
+		var reward = Tier1SkinCatalog.get_reward(product_name)
+		if reward.is_empty():
 			continue
 		var button = Button.new()
-		button.text = skin.get("title", "(untitled)")
-		button.pressed.connect(func(): _apply_owned_skin(recipe))
+		button.text = product_name
+		button.pressed.connect(func(): _apply_tier1_reward(reward))
 		_skins_vbox.add_child(button)
+		any_shown = true
+
+	if not any_shown:
+		_skins_status_label.text = "No equippable skins yet -- using a random skin."
 
 func _on_skins_fetch_failed(message: String):
 	_skins_status_label.text = message
@@ -369,6 +436,17 @@ func _apply_owned_skin(web_recipe: Dictionary):
 		"base_color": web_recipe.get("baseColor", "#8a8f96"),
 		"highlight_color": web_recipe.get("highlightColor", "#c7ccd1"),
 	}
+	_blueprint.decal_path = ""
+	_active_special_effect = ""
+	_rebuild_preview()
+
+# tier1_skin_catalog.gd's reward dicts already use AssemblyBlueprint's
+# native snake_case/hex shape directly (no web camelCase conversion
+# needed, unlike _apply_owned_skin) since they're authored here in Godot.
+func _apply_tier1_reward(reward: Dictionary):
+	_blueprint.skin_recipe = reward.get("skin_recipe", {}).duplicate()
+	_blueprint.decal_path = reward.get("decal_path", "")
+	_active_special_effect = reward.get("special_effect", "")
 	_rebuild_preview()
 
 func _on_random_skin_pressed():
@@ -376,6 +454,8 @@ func _on_random_skin_pressed():
 		"seed": randi() % 100000, "frequency": 0.08,
 		"dark_color": "#26201a", "base_color": "#8a8f96", "highlight_color": "#c7ccd1",
 	}
+	_blueprint.decal_path = ""
+	_active_special_effect = ""
 	_rebuild_preview()
 
 # --- interaction handlers ------------------------------------------------------

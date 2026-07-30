@@ -36,6 +36,13 @@ private:
     // as web/lib/skin-recipe.ts's SkinRecipe.
     Dictionary skin_recipe;
 
+    // Optional res:// path to a badge/logo image composited on top of the
+    // procedural skin texture (see PartAssembler::assemble). Empty = no
+    // decal. A plain path string, not baked into skin_recipe, since a
+    // decal is an independent reward (e.g. a commemorative purchase) that
+    // can apply on top of any skin_recipe colors/pattern.
+    String decal_path;
+
 protected:
     static void _bind_methods();
 
@@ -54,6 +61,9 @@ public:
 
     void set_skin_recipe(const Dictionary &p_recipe);
     Dictionary get_skin_recipe() const;
+
+    void set_decal_path(const String &p_path);
+    String get_decal_path() const;
 
     String to_json() const;
     static Ref<AssemblyBlueprint> from_json(const String &json_text);

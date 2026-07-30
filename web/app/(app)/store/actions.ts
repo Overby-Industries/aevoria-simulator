@@ -49,6 +49,7 @@ export async function createCheckoutSession(formData: FormData) {
       buyer_id: user.id,
       stripe_price_id: price.id,
       stripe_product_id: product.id,
+      product_name: product.name,
     },
   });
 
