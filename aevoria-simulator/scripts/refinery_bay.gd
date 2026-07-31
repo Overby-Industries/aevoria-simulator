@@ -1,6 +1,7 @@
 extends Node3D
 
-## Ore processing chain, first slice: raw PGM (mined in AsteroidField) can
+## Ore processing chain, first slice: raw PGM (mined at the deep-space
+## situation table, situation_table.gd) can
 ## now be smelted into Gold, Platinum, or Steel -- the "unlock more
 ## resources" step the user asked for after Greenhouse Bay closed the
 ## H2O -> Food loop. Same explicit-UI-command conversion pattern as

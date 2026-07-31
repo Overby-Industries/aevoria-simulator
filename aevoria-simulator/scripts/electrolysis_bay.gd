@@ -1,6 +1,7 @@
 extends Node3D
 
-## Water split, first slice: raw H2O (mined as comets in AsteroidField)
+## Water split, first slice: raw H2O (mined as comets at the deep-space
+## situation table, situation_table.gd)
 ## can now be split into Potable Water and O2 -- the life-support side
 ## of the resource loop, alongside Greenhouse Bay's direct H2O -> Food
 ## use. Three identical electrolysis tanks (unlike Refinery's three
