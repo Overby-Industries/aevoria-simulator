@@ -54,6 +54,14 @@ static func build_levels() -> Array:
 			"scene_path": "res://scenes/ObligationLevel.tscn",
 		},
 		{
+			"id": "oligarch_boardroom_capture",
+			"kind": Kind.GOVERNANCE,
+			"faction_id": OLIGARCH_COMBINE,
+			"title": "Boardroom Capture",
+			"objective": "Run the Combine's quarter: three decisions, each with a clean option and a corrupt one. The same Capture Risk Index the Commonwealth is scored on scores the Combine too -- it just tolerates a much higher number before anything happens.",
+			"scene_path": "res://scenes/OligarchBoardroom.tscn",
+		},
+		{
 			"id": "prospecting_asteroid_field",
 			"kind": Kind.EXTRACTION,
 			"faction_id": AEVORIA_COMMONWEALTH,
