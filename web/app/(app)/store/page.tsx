@@ -57,7 +57,7 @@ export default async function StorePage() {
                 ? `$${(item.amount / 100).toFixed(2)} ${item.currency.toUpperCase()}`
                 : "—"}
             </p>
-            <form action={createCheckoutSession} style={styles.buttonForm}>
+            <form action={createCheckoutSession}>
               <input type="hidden" name="priceId" value={item.priceId} />
               <button style={styles.button} type="submit">
                 Buy
@@ -109,12 +109,14 @@ const styles: Record<string, React.CSSProperties> = {
   image: { width: "100%", borderRadius: "8px", objectFit: "cover" },
   itemName: { margin: 0, fontSize: "1.1rem" },
   desc: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
-  price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0" },
-  // marginTop: "auto" on the flex-column card's last child pushes it (and
-  // only it) down to the bottom of the card, regardless of how tall the
-  // description above it is -- this is the actual bottom-alignment fix,
-  // not the button style below (the button fills its form, not the card).
-  buttonForm: { marginTop: "auto" },
+  // marginTop: "auto" here (not on the form below) pushes the price AND
+  // everything after it -- the Buy button -- down together as one block,
+  // so price+button land flush at the bottom of every card at the same
+  // height regardless of how tall the description above them is. Putting
+  // the auto margin on the form instead would leave the price sitting
+  // wherever the description happened to end, still misaligned across
+  // cards of different description length.
+  price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0", marginTop: "auto" },
   button: {
     padding: "10px 12px",
     borderRadius: "6px",

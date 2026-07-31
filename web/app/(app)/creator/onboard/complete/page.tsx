@@ -49,11 +49,11 @@ export default async function CreatorOnboardCompletePage() {
           <>
             <h1 style={styles.heading}>You're a creator now</h1>
             <p style={styles.text}>
-              Stripe onboarding is complete. You can now upload skins to the
+              Stripe onboarding is complete. You can now design skins for the
               Cooperative Exchange.
             </p>
-            <a href="/creator/upload" style={styles.link}>
-              Upload your first skin
+            <a href="/creator/create" style={styles.link}>
+              Create your first skin
             </a>
           </>
         ) : (

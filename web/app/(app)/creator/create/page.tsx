@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SkinCustomizerWrapper from "@/components/SkinCustomizerWrapper";
@@ -34,8 +33,9 @@ export default async function CreatorCreatePage({
       <form action={createProceduralSkin} style={styles.card}>
         <h1 style={styles.heading}>Create a procedural skin</h1>
         <p style={styles.text}>
-          Design a pattern with the live preview below, then submit for review. Have a
-          finished file instead? <Link href="/creator/upload" style={styles.link}>Upload it here</Link>.
+          Design a pattern with the live preview below, then submit for review. Every
+          skin here is generated from color/pattern controls, not an uploaded image or
+          file -- that's a deliberate content-safety choice, not a missing feature.
         </p>
         {params.error && <p style={styles.error}>{params.error}</p>}
         {params.submitted && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
   DEFAULT_RECIPE,
   MAX_FREQUENCY,
@@ -91,23 +92,74 @@ function hexToVec3(hex: string): THREE.Vector3 {
   return new THREE.Vector3(c.r, c.g, c.b);
 }
 
+// Mirrors situation_table.gd's _ship_marker_spec() / part_catalog.gd's real
+// hull shapes exactly, so "what will this look like in the sim" is an
+// honest preview rather than a generic sphere: Commonwealth's SSTO is
+// approximated with a capsule (SimpleShapes/Three.js both lack the C++
+// PartAssembler's composite winged_fuselage mesh), while the Combine's
+// Tube Rocket Hull (cylinder) and the Flotilla's Drift Hull (box) are
+// exact shape matches. Scaled up ~3x from the tactical-table icon size in
+// situation_table.gd for a preview that actually fills the viewport.
+type HullId = 'commonwealth' | 'oligarch' | 'nomad';
+
+const HULL_OPTIONS: { id: HullId; label: string }[] = [
+  { id: 'commonwealth', label: 'Aevoric Commonwealth -- SSTO (capsule approximation)' },
+  { id: 'oligarch', label: 'Oligarch Combine -- Tube Rocket Hull (cylinder)' },
+  { id: 'nomad', label: 'Nomad Flotilla -- Drift Hull (box)' },
+];
+
+function buildHullGeometry(hull: HullId): THREE.BufferGeometry {
+  switch (hull) {
+    case 'oligarch':
+      return new THREE.CylinderGeometry(0.85, 0.85, 2.6, 48);
+    case 'nomad':
+      return new THREE.BoxGeometry(1.35, 1.05, 3.0);
+    case 'commonwealth':
+    default:
+      return new THREE.CapsuleGeometry(0.66, 2.7, 8, 24);
+  }
+}
+
 export default function SkinCustomizer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const recipeInputRef = useRef<HTMLInputElement>(null);
   const snapshotInputRef = useRef<HTMLInputElement>(null);
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
 
   const [recipe, setRecipe] = useState<SkinRecipe>(DEFAULT_RECIPE);
+  const [hull, setHull] = useState<HullId>('commonwealth');
 
-  // Three.js setup -- runs once.
+  // Three.js setup -- runs once (in principle). React 18 StrictMode
+  // double-invokes effects in dev, and the previous version of this effect
+  // appended a fresh <canvas> on each invocation and only removed the old
+  // one via containerRef.current.removeChild() in cleanup -- if that
+  // removal doesn't land (StrictMode's synchronous mount->cleanup->mount
+  // sequencing left a stale canvas behind in practice here), you get TWO
+  // canvases stacked in the DOM: a frozen leftover that's actually visible,
+  // and a live, correctly-updating one rendered invisibly below it -- which
+  // is exactly why color/seed changes appeared to do nothing. Clearing the
+  // container's children unconditionally at the start of the effect, and
+  // removing by the element's own .remove() in cleanup (not a parent
+  // reference that might be stale), makes this safe regardless of how many
+  // times the effect fires.
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
+    while (container.firstChild) container.removeChild(container.firstChild);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x14181f);
+    sceneRef.current = scene;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    key.position.set(2, 3, 4);
+    scene.add(key);
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(0, 0, 3.2);
+    camera.position.set(0, 0.6, 4.2);
 
     // preserveDrawingBuffer is required for a reliable canvas.toDataURL()
     // snapshot -- without it the WebGL buffer can be cleared by the time
@@ -115,7 +167,14 @@ export default function SkinCustomizer() {
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     renderer.setSize(320, 320);
     renderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 2.0;
+    controls.maxDistance = 8.0;
+    controls.target.set(0, 0, 0);
 
     const material = new THREE.ShaderMaterial({
       vertexShader: VERTEX_SHADER,
@@ -130,14 +189,15 @@ export default function SkinCustomizer() {
     });
     materialRef.current = material;
 
-    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1.4, 48, 48), material);
-    scene.add(sphere);
+    const mesh = new THREE.Mesh(buildHullGeometry(hull), material);
+    meshRef.current = mesh;
+    scene.add(mesh);
 
     let animationFrameId: number;
     let frame = 0;
     function animate() {
       animationFrameId = requestAnimationFrame(animate);
-      sphere.rotation.y += 0.004;
+      controls.update();
       renderer.render(scene, camera);
 
       // Keep the hidden snapshot field fresh from inside the render loop
@@ -145,8 +205,8 @@ export default function SkinCustomizer() {
       // Server Action form handling reads FormData at a point that doesn't
       // reliably run after a same-tick DOM mutation from a second 'submit'
       // listener, so a submit-time capture can race and ship an empty
-      // snapshot. ~4/sec is enough to stay current with slider/color edits
-      // without paying PNG-encode cost every frame.
+      // snapshot. ~4/sec is enough to stay current with slider/color/orbit
+      // edits without paying PNG-encode cost every frame.
       frame++;
       if ((frame === 1 || frame % 15 === 0) && snapshotInputRef.current) {
         snapshotInputRef.current.value = renderer.domElement.toDataURL('image/png');
@@ -156,14 +216,23 @@ export default function SkinCustomizer() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      controls.dispose();
       renderer.dispose();
       material.dispose();
-      sphere.geometry.dispose();
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
+      mesh.geometry.dispose();
+      renderer.domElement.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Swap the mesh's geometry in place when the previewed hull changes --
+  // no need to tear down the renderer/scene/controls for this.
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    mesh.geometry.dispose();
+    mesh.geometry = buildHullGeometry(hull);
+  }, [hull]);
 
   // Push recipe changes into the shader's uniforms and the hidden form field.
   useEffect(() => {
@@ -186,13 +255,32 @@ export default function SkinCustomizer() {
 
   return (
     <div style={styles.wrapper}>
-      <div ref={containerRef} style={styles.canvasContainer} />
+      <p style={styles.hint}>
+        Drag to orbit, scroll to zoom -- this is the same hull-shape preview
+        the Assembly Bay uses in the simulator. Pick a hull below to see how
+        the skin reads on each faction's ship.
+      </p>
+
+      <label style={styles.label} title="Changes which faction's real hull shape the preview uses -- purely visual, doesn't affect the saved skin.">
+        Preview hull
+        <select
+          style={styles.select}
+          value={hull}
+          onChange={(e) => setHull(e.target.value as HullId)}
+        >
+          {HULL_OPTIONS.map((opt) => (
+            <option key={opt.id} value={opt.id}>{opt.label}</option>
+          ))}
+        </select>
+      </label>
+
+      <div ref={containerRef} style={styles.canvasContainer} title="Drag to orbit, scroll to zoom" />
 
       <input type="hidden" name="recipe" ref={recipeInputRef} />
       <input type="hidden" name="snapshot" ref={snapshotInputRef} />
 
       <div style={styles.controls}>
-        <label style={styles.label}>
+        <label style={styles.label} title="Changes which noise cells make up the pattern -- same colors, different layout. Randomize picks one for you.">
           Seed
           <div style={styles.seedRow}>
             <input
@@ -207,7 +295,7 @@ export default function SkinCustomizer() {
           </div>
         </label>
 
-        <label style={styles.label}>
+        <label style={styles.label} title="How large each noise cell is -- low values give a few large blotches, high values give many small speckles.">
           Pattern scale ({recipe.frequency.toFixed(3)})
           <input
             style={styles.slider}
@@ -221,7 +309,7 @@ export default function SkinCustomizer() {
         </label>
 
         <div style={styles.colorRow}>
-          <label style={styles.colorLabel}>
+          <label style={styles.colorLabel} title="The thin dark lines between cells -- a small fraction of the surface.">
             Ink lines
             <input
               type="color"
@@ -229,7 +317,7 @@ export default function SkinCustomizer() {
               onChange={(e) => setRecipe((r) => ({ ...r, darkColor: e.target.value }))}
             />
           </label>
-          <label style={styles.colorLabel}>
+          <label style={styles.colorLabel} title="The dominant color -- covers most of the hull.">
             Base
             <input
               type="color"
@@ -237,7 +325,7 @@ export default function SkinCustomizer() {
               onChange={(e) => setRecipe((r) => ({ ...r, baseColor: e.target.value }))}
             />
           </label>
-          <label style={styles.colorLabel}>
+          <label style={styles.colorLabel} title="The secondary accent color -- fills the remaining cells.">
             Highlight
             <input
               type="color"
@@ -253,15 +341,26 @@ export default function SkinCustomizer() {
 
 const styles: Record<string, React.CSSProperties> = {
   wrapper: { display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' },
+  hint: { fontSize: '0.8rem', color: '#9aa2b0', margin: 0, textAlign: 'center', maxWidth: '320px' },
   canvasContainer: {
     width: '320px',
     height: '320px',
     borderRadius: '12px',
     overflow: 'hidden',
     border: '1px solid #2a2f3a',
+    cursor: 'grab',
+  },
+  select: {
+    padding: '8px 10px',
+    borderRadius: '6px',
+    border: '1px solid #2a2f3a',
+    background: '#0b0d10',
+    color: '#e7e6e1',
+    fontSize: '0.85rem',
+    width: '100%',
   },
   controls: { display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' },
-  label: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: '#e7e6e1' },
+  label: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: '#e7e6e1', width: '100%' },
   seedRow: { display: 'flex', gap: '8px' },
   numberInput: {
     flex: 1,
