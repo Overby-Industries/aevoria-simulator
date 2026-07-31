@@ -17,7 +17,7 @@ const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCITracker = preload("res://scripts/vci_tracker.gd")
 
-const DEBUG_FACTIONS = [
+const FACTIONS = [
 	{"id": LevelCatalog.AEVORIA_COMMONWEALTH, "label": "Commonwealth"},
 	{"id": LevelCatalog.OLIGARCH_COMBINE, "label": "Oligarch Combine"},
 	{"id": LevelCatalog.NOMAD_FLOTILLA, "label": "Nomad Flotilla"},
@@ -27,8 +27,8 @@ var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
 var _founders_monument: CanvasLayer
 
 func _ready() -> void:
-	if OS.is_debug_build() and LevelContext.debug_faction_override != "":
-		_faction_id = LevelContext.debug_faction_override
+	if LevelContext.faction_override != "":
+		_faction_id = LevelContext.faction_override
 	add_child(HeroBackdrop.new())
 	add_child(ConsoleLogPanel.new())
 	SystemLog.log("Level Select loaded.")
@@ -67,16 +67,21 @@ func _build_ui() -> void:
 	scroll.add_child(outer)
 
 	var header = Label.new()
-	header.text = "AEVORIA COMMONWEALTH — LEVEL SELECT"
+	header.text = "%s — LEVEL SELECT" % _faction_label(_faction_id).to_upper()
 	outer.add_child(header)
 
-	if OS.is_debug_build():
-		outer.add_child(_build_debug_faction_row())
+	outer.add_child(_build_faction_row())
 
 	outer.add_child(HSeparator.new())
 
+	# Each faction only ever sees its own levels -- the Commonwealth
+	# shouldn't see Boardroom Capture any more than the Combine should
+	# see The Reef's Advocate. See docs/FACTIONS.md for why the three
+	# rosters are genuinely different playthroughs, not one shared list.
 	var state = FactionHomeBase.load_state(_faction_id)
 	for level in LevelCatalog.build_levels():
+		if level["faction_id"] != _faction_id:
+			continue
 		outer.add_child(_build_level_card(level, state))
 
 	outer.add_child(HSeparator.new())
@@ -95,23 +100,30 @@ func _build_ui() -> void:
 
 	_build_resources_panel(canvas, state)
 
-## Debug-build-only row of buttons for switching which faction levels
-## launch as -- see level_context.gd's debug_faction_override and the
-## comment on the `faction_id` local in _build_level_card(). Rebuilds the
-## whole scene on change (simplest way to propagate the new faction into
-## every already-built panel/card) rather than trying to patch every
-## affected label in place.
-func _build_debug_faction_row() -> HBoxContainer:
+static func _faction_label(faction_id: String) -> String:
+	for faction in FACTIONS:
+		if faction["id"] == faction_id:
+			return faction["label"]
+	return faction_id
+
+## Row of buttons for switching which faction the player is browsing/
+## playing as -- a real gameplay feature in every build, not just debug
+## ones, since it's what makes the level roster below actually faction-
+## specific (see _build_ui()'s filter). Rebuilds the whole scene on
+## change (simplest way to propagate the new faction into every already-
+## built panel/card) rather than trying to patch every affected label in
+## place.
+func _build_faction_row() -> HBoxContainer:
 	var row = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 
 	var label = Label.new()
-	label.text = "DEBUG FACTION:"
+	label.text = "FACTION:"
 	label.add_theme_font_size_override("font_size", 10)
-	label.add_theme_color_override("font_color", Color(0.95, 0.6, 0.3))
+	label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.95))
 	row.add_child(label)
 
-	for faction in DEBUG_FACTIONS:
+	for faction in FACTIONS:
 		var button = Button.new()
 		button.text = faction["label"]
 		button.theme_type_variation = "GlassButton"
@@ -119,8 +131,8 @@ func _build_debug_faction_row() -> HBoxContainer:
 		button.disabled = faction["id"] == _faction_id
 		var faction_id = faction["id"]
 		button.pressed.connect(func():
-			LevelContext.debug_faction_override = faction_id
-			SystemLog.log("[DEBUG] Switched faction to %s." % faction_id)
+			LevelContext.faction_override = faction_id
+			SystemLog.log("Switched faction to %s." % _faction_label(faction_id))
 			get_tree().reload_current_scene()
 		)
 		row.add_child(button)
@@ -288,12 +300,11 @@ func _build_level_card(level: Dictionary, state: Dictionary) -> PanelContainer:
 	launch_button.text = "Launch"
 	launch_button.theme_type_variation = "GlassButton"
 	var level_id = level["id"]
-	# Debug builds can override which faction a level launches as (see
-	# _build_debug_faction_row()) so the Oligarch Combine/Nomad Flotilla
-	# exclusive hulls in part_catalog.gd are actually reachable for
-	# testing -- every level in level_catalog.gd is Commonwealth-only
-	# today, so in a normal (release) build this is just level["faction_id"].
-	var faction_id = _faction_id if OS.is_debug_build() else level["faction_id"]
+	# _build_ui() already filters cards to level["faction_id"] == _faction_id,
+	# so this is never a mismatch -- using _faction_id directly (rather than
+	# level["faction_id"]) keeps the faction switcher the single source of
+	# truth for who's playing.
+	var faction_id = _faction_id
 	var scene_path = level["scene_path"]
 	launch_button.pressed.connect(func():
 		LevelContext.start_level(level_id, faction_id)

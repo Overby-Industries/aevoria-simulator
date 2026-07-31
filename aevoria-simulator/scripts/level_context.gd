@@ -13,18 +13,23 @@ signal level_finished(level_id: String)
 var current_level_id: String = ""
 var current_faction_id: String = ""
 
-## Debug-build-only escape hatch (see level_select.gd's debug faction
-## switcher) so a developer can play any level -- including the
-## Commonwealth-only ones like Assembly Bay/Asteroid Field -- as the
-## Oligarch Combine or Nomad Flotilla for testing/demos. Boardroom Capture
-## and The Long Drift are already faction-flagged in level_catalog.gd and
-## reachable without this in a normal build; this override is for
-## reaching the other factions' exclusive hulls (part_catalog.gd) inside
-## levels that are still Commonwealth-only. Empty string means "no
-## override, use the level's own faction_id" -- the untouched, shipped
-## behavior. Survives a scene reload (that's the whole point -- an
-## ordinary var reset on every LevelSelect._ready() wouldn't).
-var debug_faction_override: String = ""
+## Which faction the player is currently browsing/playing as -- set by
+## level_select.gd's faction switcher, in every build, not just debug
+## ones. Level Select filters its level cards down to only this faction's
+## own catalog entries (see level_select.gd's _build_ui()), so switching
+## here is what actually makes the Commonwealth/Combine/Flotilla separate
+## playthroughs instead of one shared roster. That filtering is strict:
+## most levels are still Commonwealth-only, so switching away from the
+## Commonwealth currently narrows the roster to just that faction's own
+## dedicated level(s) -- there's no longer a way to reach the Oligarch/
+## Nomad exclusive hulls (part_catalog.gd) inside Commonwealth-only levels
+## like Assembly Bay this way; that stays a known gap until those levels
+## either go faction-agnostic or get their own faction-flagged variants.
+## Empty string means "no override, default to the Commonwealth" -- the
+## untouched, original behavior, and still level_select.gd's starting
+## faction on first launch. Survives a scene reload (that's the whole
+## point -- an ordinary var reset on every LevelSelect._ready() wouldn't).
+var faction_override: String = ""
 
 func start_level(level_id: String, faction_id: String) -> void:
 	current_level_id = level_id
