@@ -29,15 +29,109 @@ const FACTION_LABELS = {
 static func faction_label(faction_id: String) -> String:
 	return FACTION_LABELS.get(faction_id, faction_id)
 
+## Each faction's own name for its hardware/production hub, used both as
+## main_hangar_deck's card title in build_levels() and as
+## main_hangar_deck.gd's own header -- see docs/FACTIONS.md for why these
+## aren't just "Hangar Deck" with a faction label stapled on: the
+## Commonwealth's is a station bay, the Combine's a corporate floor, the
+## Flotilla's a shared deck with no ownership implied.
+const HANGAR_DECK_LABELS = {
+	AEVORIA_COMMONWEALTH: "Main Hangar Deck",
+	OLIGARCH_COMBINE: "Combine Production Floor",
+	NOMAD_FLOTILLA: "Flotilla Common Deck",
+}
+
+static func hangar_deck_label(faction_id: String) -> String:
+	return HANGAR_DECK_LABELS.get(faction_id, "Hangar Deck")
+
+## The Assembly Bay entry differs per faction only in which faction-
+## exclusive hull it calls out (part_catalog.gd) -- the scene itself
+## (assembly_bay.gd) already faction-filters its own part list, so this is
+## flavor text and level-id/reward tracking, not a different scene per
+## faction. Ids match what shipped before the Hangar Deck consolidation
+## (extraction_prospector_run predates it) so nobody's completed-levels
+## history resets for the Commonwealth.
+const ASSEMBLY_LEVEL_BY_FACTION = {
+	AEVORIA_COMMONWEALTH: {
+		"id": "extraction_prospector_run",
+		"title": "Assembly Bay",
+		"objective": "Assemble a mining ship -- attach a drill arm and a thruster to the hull -- then save it.",
+		"scene_path": "res://scenes/AssemblyBay.tscn",
+	},
+	OLIGARCH_COMBINE: {
+		"id": "oligarch_fabrication_yard",
+		"title": "Assembly Bay",
+		"objective": "Assemble a mining ship -- attach a drill arm and a thruster to the Tube Rocket Hull, the Combine's own faction-exclusive hull -- then save it.",
+		"scene_path": "res://scenes/AssemblyBay.tscn",
+	},
+	NOMAD_FLOTILLA: {
+		"id": "nomad_refit_deck",
+		"title": "Assembly Bay",
+		"objective": "Assemble a mining ship -- attach a drill arm and a thruster to the Drift Hull, the Flotilla's own faction-exclusive hull -- then save it.",
+		"scene_path": "res://scenes/AssemblyBay.tscn",
+	},
+}
+
+## The three production bays are already faction-agnostic (greenhouse_bay.gd/
+## refinery_bay.gd/electrolysis_bay.gd all spend/bank through
+## LevelContext.current_faction_id, never a hardcoded faction) -- one set of
+## ids shared by every faction. FactionHomeBase already namespaces
+## completed_levels/resources by faction_id, so the same level id
+## completed by two different factions doesn't collide.
+const PRODUCTION_LEVELS = [
+	{
+		"id": "production_greenhouse_bay",
+		"title": "Greenhouse Bay",
+		"objective": "Spend banked H2O in the station's LED grow bays to produce Food.",
+		"scene_path": "res://scenes/GreenhouseBay.tscn",
+	},
+	{
+		"id": "production_refinery_bay",
+		"title": "Refinery Bay",
+		"objective": "Smelt banked PGM into Gold, Platinum, and Steel.",
+		"scene_path": "res://scenes/RefineryBay.tscn",
+	},
+	{
+		"id": "production_electrolysis_bay",
+		"title": "Electrolysis Bay",
+		"objective": "Split banked H2O into Potable Water and O2.",
+		"scene_path": "res://scenes/ElectrolysisBay.tscn",
+	},
+]
+
+## What main_hangar_deck.gd shows as sub-options for the given faction --
+## Assembly Bay first (that's the one with a faction-specific flavor),
+## then the three shared production bays.
+static func hangar_levels(faction_id: String) -> Array:
+	var levels: Array = [ASSEMBLY_LEVEL_BY_FACTION.get(faction_id, ASSEMBLY_LEVEL_BY_FACTION[AEVORIA_COMMONWEALTH])]
+	levels.append_array(PRODUCTION_LEVELS)
+	return levels
+
 static func build_levels() -> Array:
 	return [
 		{
-			"id": "extraction_prospector_run",
-			"kind": Kind.EXTRACTION,
+			"id": "main_hangar_deck",
+			"kind": Kind.PRODUCTION,
 			"faction_id": AEVORIA_COMMONWEALTH,
-			"title": "Prospector Run",
-			"objective": "Assemble a mining ship in the Assembly Bay -- attach a drill arm and a thruster to the hull -- then save it.",
-			"scene_path": "res://scenes/AssemblyBay.tscn",
+			"title": HANGAR_DECK_LABELS[AEVORIA_COMMONWEALTH],
+			"objective": "Head inside the station: build ships in the Assembly Bay, grow Food, process metals, or split water for O2 -- everything the Commonwealth's hardware side does lives behind this one door now.",
+			"scene_path": "res://scenes/MainHangarDeck.tscn",
+		},
+		{
+			"id": "oligarch_hangar_deck",
+			"kind": Kind.PRODUCTION,
+			"faction_id": OLIGARCH_COMBINE,
+			"title": HANGAR_DECK_LABELS[OLIGARCH_COMBINE],
+			"objective": "Head inside Combine holdings: build ships, grow Food, process metals, or split water for O2 -- the Combine's own hardware side, same floor plan as the Commonwealth's.",
+			"scene_path": "res://scenes/MainHangarDeck.tscn",
+		},
+		{
+			"id": "nomad_hangar_deck",
+			"kind": Kind.PRODUCTION,
+			"faction_id": NOMAD_FLOTILLA,
+			"title": HANGAR_DECK_LABELS[NOMAD_FLOTILLA],
+			"objective": "Head into whichever hull is serving as the Flotilla's common deck this leg: build ships, grow Food, process metals, or split water for O2.",
+			"scene_path": "res://scenes/MainHangarDeck.tscn",
 		},
 		{
 			"id": "governance_first_violation",
@@ -64,22 +158,6 @@ static func build_levels() -> Array:
 			"scene_path": "res://scenes/ObligationLevel.tscn",
 		},
 		{
-			"id": "oligarch_fabrication_yard",
-			"kind": Kind.EXTRACTION,
-			"faction_id": OLIGARCH_COMBINE,
-			"title": "Combine Fabrication Yard",
-			"objective": "Assemble a mining ship in the Assembly Bay -- attach a drill arm and a thruster to the Tube Rocket Hull, the Combine's own faction-exclusive hull -- then save it.",
-			"scene_path": "res://scenes/AssemblyBay.tscn",
-		},
-		{
-			"id": "nomad_refit_deck",
-			"kind": Kind.EXTRACTION,
-			"faction_id": NOMAD_FLOTILLA,
-			"title": "Flotilla Refit Deck",
-			"objective": "Assemble a mining ship in the Assembly Bay -- attach a drill arm and a thruster to the Drift Hull, the Flotilla's own faction-exclusive hull -- then save it.",
-			"scene_path": "res://scenes/AssemblyBay.tscn",
-		},
-		{
 			"id": "oligarch_boardroom_capture",
 			"kind": Kind.GOVERNANCE,
 			"faction_id": OLIGARCH_COMBINE,
@@ -102,29 +180,5 @@ static func build_levels() -> Array:
 			"title": "Asteroid Field Prospecting",
 			"objective": "Scan the field and mine asteroids for PGMs, comets for H2O -- resources bank straight to the Commonwealth commons.",
 			"scene_path": "res://scenes/AsteroidField.tscn",
-		},
-		{
-			"id": "production_greenhouse_bay",
-			"kind": Kind.PRODUCTION,
-			"faction_id": AEVORIA_COMMONWEALTH,
-			"title": "Greenhouse Bay",
-			"objective": "Spend banked H2O in the station's LED grow bays to produce Food for the Commonwealth commons.",
-			"scene_path": "res://scenes/GreenhouseBay.tscn",
-		},
-		{
-			"id": "production_refinery_bay",
-			"kind": Kind.PRODUCTION,
-			"faction_id": AEVORIA_COMMONWEALTH,
-			"title": "Refinery Bay",
-			"objective": "Smelt banked PGM into Gold, Platinum, and Steel for the Commonwealth commons.",
-			"scene_path": "res://scenes/RefineryBay.tscn",
-		},
-		{
-			"id": "production_electrolysis_bay",
-			"kind": Kind.PRODUCTION,
-			"faction_id": AEVORIA_COMMONWEALTH,
-			"title": "Electrolysis Bay",
-			"objective": "Split banked H2O into Potable Water and O2 to sustain the station's life support.",
-			"scene_path": "res://scenes/ElectrolysisBay.tscn",
 		},
 	]
