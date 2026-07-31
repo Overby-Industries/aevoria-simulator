@@ -18,6 +18,8 @@ const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 # availability"/"Electrical power continuity" sub-measures.
 const SHELTER_PART_ID = "habitat_ring_mk1"
 const POWER_PART_ID = "power_cell_mk1"
+const SANITATION_PART_ID = "waste_recycler_mk1"
+const HEALTHCARE_PART_ID = "medbay_mk1"
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var camera: Camera3D = $Camera3D
@@ -517,6 +519,12 @@ func _record_infrastructure() -> void:
 	if part_ids.has(POWER_PART_ID):
 		FactionHomeBase.mark_infrastructure_built(faction_id, "power", _blueprint.ship_id)
 		SystemLog.log("Power source registered: %s now feeds the Commonwealth grid." % _blueprint.ship_id)
+	if part_ids.has(SANITATION_PART_ID):
+		FactionHomeBase.mark_infrastructure_built(faction_id, "sanitation", _blueprint.ship_id)
+		SystemLog.log("Sanitation registered: %s now processes Commonwealth waste." % _blueprint.ship_id)
+	if part_ids.has(HEALTHCARE_PART_ID):
+		FactionHomeBase.mark_infrastructure_built(faction_id, "healthcare", _blueprint.ship_id)
+		SystemLog.log("Healthcare registered: %s now provides medical capacity." % _blueprint.ship_id)
 
 func _on_finish_pressed():
 	LevelContext.finish_current_level({"Platinum": 25.0})

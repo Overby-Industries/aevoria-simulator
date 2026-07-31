@@ -112,6 +112,25 @@ Dictionary violation_record_to_dict(const cur::ViolationRecord &v) {
     return out;
 }
 
+Dictionary obligation_to_dict(const cur::Obligation &o) {
+    Dictionary out;
+    out["id"] = int64_t(o.id);
+    out["kind"] = int(o.kind);
+    out["owed_by"] = int64_t(o.owed_by);
+    out["concerning"] = int64_t(o.concerning);
+    out["opened_tick"] = int64_t(o.opened_tick);
+    out["due_tick"] = int64_t(o.due_tick);
+    out["recurrence_ticks"] = int64_t(o.recurrence_ticks);
+    out["discharged"] = o.discharged;
+    out["discharged_tick"] = int64_t(o.discharged_tick);
+    out["lapsed"] = o.lapsed;
+    out["lapsed_tick"] = int64_t(o.lapsed_tick);
+    out["lapse_count"] = int64_t(o.lapse_count);
+    out["citation"] = from_std(o.citation);
+    out["detail"] = from_std(o.detail);
+    return out;
+}
+
 }  // namespace
 
 void CURComplianceMonitor::_bind_methods() {
@@ -147,6 +166,15 @@ void CURComplianceMonitor::_bind_methods() {
                          &CURComplianceMonitor::update_vital_continuity);
     ClassDB::bind_method(D_METHOD("get_vital_continuity"), &CURComplianceMonitor::get_vital_continuity);
     ClassDB::bind_method(D_METHOD("get_vital_continuity_band"), &CURComplianceMonitor::get_vital_continuity_band);
+
+    ClassDB::bind_method(D_METHOD("open_obligation", "kind", "owed_by", "concerning", "opened_tick",
+                                  "due_tick", "recurrence_ticks", "detail"),
+                         &CURComplianceMonitor::open_obligation, DEFVAL(String()));
+    ClassDB::bind_method(D_METHOD("discharge_obligation", "id", "tick"), &CURComplianceMonitor::discharge_obligation);
+    ClassDB::bind_method(D_METHOD("run_builtin_test", "tick"), &CURComplianceMonitor::run_builtin_test);
+    ClassDB::bind_method(D_METHOD("restriction_supported", "concerning", "tick"), &CURComplianceMonitor::restriction_supported);
+    ClassDB::bind_method(D_METHOD("get_outstanding_obligations", "tick"), &CURComplianceMonitor::get_outstanding_obligations);
+    ClassDB::bind_method(D_METHOD("obligation_kind_name", "kind"), &CURComplianceMonitor::obligation_kind_name);
 
     ClassDB::bind_method(D_METHOD("propose_regulation_amendment", "regulation", "proposal_id", "author_id", "rationale", "tick"),
                          &CURComplianceMonitor::propose_regulation_amendment);
@@ -214,6 +242,15 @@ void CURComplianceMonitor::_bind_methods() {
     ADD_SIGNAL(MethodInfo("capture_risk_updated",
                           PropertyInfo(Variant::FLOAT, "cri"),
                           PropertyInfo(Variant::INT, "band")));
+    // Raised by run_builtin_test() -- the clock found an obligation that
+    // matured unmet, not anything a player submitted.
+    ADD_SIGNAL(MethodInfo("obligation_lapsed",
+                          PropertyInfo(Variant::INT, "obligation_id"),
+                          PropertyInfo(Variant::INT, "kind"),
+                          PropertyInfo(Variant::STRING, "owed_by_id"),
+                          PropertyInfo(Variant::STRING, "concerning_id"),
+                          PropertyInfo(Variant::INT, "severity"),
+                          PropertyInfo(Variant::STRING, "citation")));
 
     // ComplianceState (Axis C — cur_state.h)
     ClassDB::bind_integer_constant(get_class_static(), "", "KS_COMPLIANT", cur::KS_COMPLIANT);
@@ -342,6 +379,13 @@ void CURComplianceMonitor::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_DEATH_DETERMINED", cur::EV_DEATH_DETERMINED);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_IRREVERSIBLE_ACT", cur::EV_IRREVERSIBLE_ACT);
     ClassDB::bind_integer_constant(get_class_static(), "", "EV_DETERMINATION_VACATED", cur::EV_DETERMINATION_VACATED);
+    ClassDB::bind_integer_constant(get_class_static(), "", "EV_OBLIGATION_LAPSED", cur::EV_OBLIGATION_LAPSED);
+
+    // ObligationKind (cur_obligation.h) -- what open_obligation()'s "kind" means.
+    ClassDB::bind_integer_constant(get_class_static(), "", "OBLIG_INVESTIGATE_REPORT", cur::OBLIG_INVESTIGATE_REPORT);
+    ClassDB::bind_integer_constant(get_class_static(), "", "OBLIG_REVIEW_RESTRICTION", cur::OBLIG_REVIEW_RESTRICTION);
+    ClassDB::bind_integer_constant(get_class_static(), "", "OBLIG_ROUTINE_AUDIT", cur::OBLIG_ROUTINE_AUDIT);
+    ClassDB::bind_integer_constant(get_class_static(), "", "OBLIG_MONITOR_PRACTICE", cur::OBLIG_MONITOR_PRACTICE);
 
     // AdvocateDomain (cur_advocate.h)
     ClassDB::bind_integer_constant(get_class_static(), "", "ADOM_ANIMAL", cur::ADOM_ANIMAL);
@@ -477,6 +521,43 @@ int CURComplianceMonitor::get_vital_continuity_band() const { return int(machine
 
 String CURComplianceMonitor::vital_continuity_band_name(int band) const {
     return String::utf8(cur::to_string(static_cast<cur::VitalContinuityBand>(band)));
+}
+
+int64_t CURComplianceMonitor::open_obligation(int kind, int64_t owed_by, int64_t concerning,
+                                              int64_t opened_tick, int64_t due_tick,
+                                              int64_t recurrence_ticks, const String &detail) {
+    return int64_t(machine.obligations().open(
+        static_cast<cur::ObligationKind>(kind), static_cast<cur::EntityHandle>(owed_by),
+        static_cast<cur::EntityHandle>(concerning), uint64_t(opened_tick), uint64_t(due_tick),
+        uint64_t(recurrence_ticks), to_std(detail)));
+}
+
+bool CURComplianceMonitor::discharge_obligation(int64_t id, int64_t tick) {
+    return machine.obligations().discharge(uint32_t(id), uint64_t(tick));
+}
+
+int64_t CURComplianceMonitor::run_builtin_test(int64_t tick) {
+    return int64_t(machine.run_builtin_test(uint64_t(tick)));
+}
+
+bool CURComplianceMonitor::restriction_supported(int64_t concerning, int64_t tick) const {
+    return machine.obligations().restriction_supported(static_cast<cur::EntityHandle>(concerning),
+                                                        uint64_t(tick));
+}
+
+Array CURComplianceMonitor::get_outstanding_obligations(int64_t tick) const {
+    Array out;
+    for (uint32_t id : machine.obligations().outstanding(uint64_t(tick))) {
+        const cur::Obligation *o = machine.obligations().get(id);
+        if (o != nullptr) {
+            out.push_back(obligation_to_dict(*o));
+        }
+    }
+    return out;
+}
+
+String CURComplianceMonitor::obligation_kind_name(int kind) const {
+    return String::utf8(cur::to_string(static_cast<cur::ObligationKind>(kind)));
 }
 
 Dictionary CURComplianceMonitor::propose_regulation_amendment(const Ref<CURGodotBridge> &regulation,
@@ -638,4 +719,13 @@ void CURComplianceMonitor::on_amendment(const cur::AmendmentProposal &p, const c
 
 void CURComplianceMonitor::on_capture_risk(double cri, cur::CaptureRiskBand band) {
     emit_signal("capture_risk_updated", cri, int(band));
+}
+
+void CURComplianceMonitor::on_obligation_lapsed(const cur::Obligation &o, cur::FaultClass severity) {
+    const cur::EntityRecord *owed_by_rec = machine.entities().get(o.owed_by);
+    const cur::EntityRecord *concerning_rec = machine.entities().get(o.concerning);
+    String owed_by_id = owed_by_rec != nullptr ? from_std(owed_by_rec->id) : String();
+    String concerning_id = concerning_rec != nullptr ? from_std(concerning_rec->id) : String();
+    emit_signal("obligation_lapsed", int64_t(o.id), int(o.kind), owed_by_id, concerning_id,
+               int(severity), from_std(o.citation));
 }

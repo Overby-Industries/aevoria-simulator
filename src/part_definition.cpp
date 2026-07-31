@@ -106,6 +106,7 @@ void PartDefinition::_bind_methods() {
     ClassDB::bind_integer_constant(get_class_static(), "", "CAT_WATER_RECLAIMER", PART_CAT_WATER_RECLAIMER);
     ClassDB::bind_integer_constant(get_class_static(), "", "CAT_WASTE_RECYCLER", PART_CAT_WASTE_RECYCLER);
     ClassDB::bind_integer_constant(get_class_static(), "", "CAT_POWER_CELL", PART_CAT_POWER_CELL);
+    ClassDB::bind_integer_constant(get_class_static(), "", "CAT_MEDBAY", PART_CAT_MEDBAY);
     ClassDB::bind_integer_constant(get_class_static(), "", "CAT_COSMETIC", PART_CAT_COSMETIC);
 }
 

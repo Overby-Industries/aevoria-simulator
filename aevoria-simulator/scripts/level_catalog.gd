@@ -46,6 +46,14 @@ static func build_levels() -> Array:
 			"scene_path": "res://scenes/AdvocateLevel.tscn",
 		},
 		{
+			"id": "governance_standing_review",
+			"kind": Kind.GOVERNANCE,
+			"faction_id": AEVORIA_COMMONWEALTH,
+			"title": "The Standing Review",
+			"objective": "Watch what happens when a routine restriction review is never filed -- CUR-H.7 §7.12(c)(3)/(d), the built-in test no guard could catch.",
+			"scene_path": "res://scenes/ObligationLevel.tscn",
+		},
+		{
 			"id": "prospecting_asteroid_field",
 			"kind": Kind.EXTRACTION,
 			"faction_id": AEVORIA_COMMONWEALTH,

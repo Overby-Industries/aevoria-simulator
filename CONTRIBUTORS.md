@@ -5,7 +5,7 @@ I am the founder of this simulator, during the initial development phase I have 
 ---
 
 - **Aevoria Simulator**
-- **Version** 1.0.11-Official-Evergreen
+- **Version** 1.0.12-Official-Evergreen
 - **Last update** June 2026
 
 ## Active Contributors

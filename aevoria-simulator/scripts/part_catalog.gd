@@ -76,6 +76,8 @@ static func build_demo_catalog() -> Array:
 	habitat_ring.sockets = [
 		{"id": "bay_1", "position": Vector3(7.0, 0, 0), "rotation_deg": Vector3(0, 0, 90), "accepts": (1 << PartDefinition.CAT_O2_SCRUBBER) | (1 << PartDefinition.CAT_HYDROPONICS_BAY)},
 		{"id": "power_mount", "position": Vector3(-7.0, 0, 0), "rotation_deg": Vector3(0, 0, 90), "accepts": 1 << PartDefinition.CAT_POWER_CELL},
+		{"id": "sanitation_mount", "position": Vector3(0, 0, 7.0), "rotation_deg": Vector3(0, 0, 90), "accepts": 1 << PartDefinition.CAT_WASTE_RECYCLER},
+		{"id": "medbay_mount", "position": Vector3(0, 0, -7.0), "rotation_deg": Vector3(0, 0, 90), "accepts": 1 << PartDefinition.CAT_MEDBAY},
 	]
 	habitat_ring.stats = {"mass": 200.0}
 
@@ -92,6 +94,24 @@ static func build_demo_catalog() -> Array:
 	power_cell.category = PartDefinition.CAT_POWER_CELL
 	power_cell.mesh_recipe = {"shape": "cylinder", "radius": 1.1, "height": 2.8}
 	power_cell.stats = {"mass": 20.0, "power_generation": 10.0}
+
+	# Fills out two more VCI sub-measures (docs/VCI_TRACKING.md's "good next
+	# candidates"): Sanitation (Biological Life Support) and Basic healthcare
+	# access, using the exact same "distinct saved ship including part X"
+	# pattern as Shelter/Power (see assembly_bay.gd's _record_infrastructure()).
+	var waste_recycler := PartDefinition.new()
+	waste_recycler.part_id = "waste_recycler_mk1"
+	waste_recycler.display_name = "Waste Recycler"
+	waste_recycler.category = PartDefinition.CAT_WASTE_RECYCLER
+	waste_recycler.mesh_recipe = {"shape": "cylinder", "radius": 1.0, "height": 2.6}
+	waste_recycler.stats = {"mass": 14.0, "power_draw": 2.5}
+
+	var medbay := PartDefinition.new()
+	medbay.part_id = "medbay_mk1"
+	medbay.display_name = "Medbay Module"
+	medbay.category = PartDefinition.CAT_MEDBAY
+	medbay.mesh_recipe = {"shape": "capsule", "radius": 1.1, "height": 3.0}
+	medbay.stats = {"mass": 18.0, "power_draw": 4.0}
 
 	# Faction-exclusive hulls -- same fore/aft socket shape as hull_mk1 so
 	# thruster_mk1/drill_arm_mk1 still fit, but each is gated to one faction.
@@ -142,4 +162,4 @@ static func build_demo_catalog() -> Array:
 	]
 	drift_hull.stats = {"mass": 45.0, "cargo_capacity": 14.0}
 
-	return [hull, thruster, drill, habitat_ring, scrubber, power_cell, ssto_hull, tube_rocket_hull, drift_hull]
+	return [hull, thruster, drill, habitat_ring, scrubber, power_cell, waste_recycler, medbay, ssto_hull, tube_rocket_hull, drift_hull]
