@@ -62,6 +62,14 @@ static func build_levels() -> Array:
 			"scene_path": "res://scenes/OligarchBoardroom.tscn",
 		},
 		{
+			"id": "nomad_long_drift",
+			"kind": Kind.GOVERNANCE,
+			"faction_id": NOMAD_FLOTILLA,
+			"title": "The Long Drift",
+			"objective": "Run three legs of a supply route with no charter and no home base: a safe choice and a risky one each leg, spending the Flotilla's own Vital Continuity Index instead of anyone else's trust.",
+			"scene_path": "res://scenes/TheLongDrift.tscn",
+		},
+		{
 			"id": "prospecting_asteroid_field",
 			"kind": Kind.EXTRACTION,
 			"faction_id": AEVORIA_COMMONWEALTH,
