@@ -54,9 +54,24 @@ func _build_ui():
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	_panel.add_child(bg)
 
+	# Ship Name / Badges & Perks / Inventory grew this panel tall enough to
+	# overlap the VCI/Commons stack anchored above it (both are independent
+	# CanvasLayers with no shared layout, so neither reserves space for the
+	# other) -- capping height here with an internal scroll, the same
+	# pattern assembly_bay.gd's root panel already uses, keeps this panel's
+	# bottom-right footprint fixed regardless of how much account content
+	# accumulates later.
+	var scroll = ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(280, 0)
+	var viewport_height = get_viewport().get_visible_rect().size.y if get_viewport() else 1080.0
+	scroll.custom_minimum_size.y = min(420.0, viewport_height * 0.45)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_panel.add_child(scroll)
+
 	var outer = VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_theme_constant_override("separation", 8)
-	_panel.add_child(outer)
+	scroll.add_child(outer)
 
 	var header = Label.new()
 	header.text = "COMMONWEALTH ACCOUNT"

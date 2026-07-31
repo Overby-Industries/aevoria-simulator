@@ -43,6 +43,8 @@ var _habitat_button: Button
 var _finish_button: Button
 var _skins_vbox: VBoxContainer
 var _skins_status_label: Label
+var _my_creations_vbox: VBoxContainer
+var _my_creations_status_label: Label
 var _back_button: Button
 var _active_special_effect: String = ""
 
@@ -82,6 +84,15 @@ func _ready():
 
 	AevoriaAuth.skins_fetched.connect(_on_skins_fetched)
 	AevoriaAuth.skins_fetch_failed.connect(_on_skins_fetch_failed)
+	AevoriaAuth.my_creations_fetched.connect(_on_my_creations_fetched)
+	AevoriaAuth.my_creations_fetch_failed.connect(_on_my_creations_fetch_failed)
+	# _refresh_owned_skins() below runs immediately in _ready(), but a
+	# returning player's session restore (AevoriaAuth._load_session() ->
+	# _refresh_now(), fired from AevoriaAuth's own _ready()) is still async
+	# at that point -- is_logged_in() reads false and both fetches silently
+	# skip with "log in first" messages that then never retry. Re-running
+	# on login_succeeded covers both that race and a fresh in-scene login.
+	AevoriaAuth.login_succeeded.connect(func(_info): _refresh_owned_skins())
 	PlayerProfile.badges_updated.connect(_refresh_badge_ui)
 	_refresh_owned_skins()
 	_refresh_badge_ui()
@@ -320,6 +331,29 @@ func _build_ui():
 	_skins_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	skins_scroll.add_child(_skins_vbox)
 
+	# A creator's own designs (from the web Skin Creator) are usable here
+	# with no purchase needed -- ownership is "you authored it", not "you
+	# bought it". Separate list from the purchased-skins one above since
+	# the two fetches (AevoriaAuth.fetch_owned_skins() /
+	# fetch_my_creations()) complete independently.
+	var my_creations_header = Label.new()
+	my_creations_header.text = "MY CREATIONS (no purchase needed)"
+	my_creations_header.add_theme_font_size_override("font_size", 12)
+	outer.add_child(my_creations_header)
+
+	_my_creations_status_label = Label.new()
+	_my_creations_status_label.add_theme_font_size_override("font_size", 11)
+	_my_creations_status_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	_my_creations_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	outer.add_child(_my_creations_status_label)
+
+	var my_creations_scroll = ScrollContainer.new()
+	my_creations_scroll.custom_minimum_size = Vector2(0, 60)
+	outer.add_child(my_creations_scroll)
+	_my_creations_vbox = VBoxContainer.new()
+	_my_creations_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	my_creations_scroll.add_child(_my_creations_vbox)
+
 	var random_skin_button = Button.new()
 	random_skin_button.text = "Random Skin"
 	random_skin_button.pressed.connect(_on_random_skin_pressed)
@@ -536,13 +570,40 @@ func _refresh_color_pickers_ui() -> void:
 func _refresh_owned_skins():
 	for child in _skins_vbox.get_children():
 		child.queue_free()
+	for child in _my_creations_vbox.get_children():
+		child.queue_free()
 
 	if not AevoriaAuth.is_logged_in():
 		_skins_status_label.text = "Log in from the Level Select screen to use a purchased skin here."
+		_my_creations_status_label.text = "Log in to use your own Skin Creator designs here."
 		return
 
 	_skins_status_label.text = "Loading your skins..."
 	AevoriaAuth.fetch_owned_skins()
+	_my_creations_status_label.text = "Loading your creations..."
+	AevoriaAuth.fetch_my_creations()
+
+func _on_my_creations_fetched(skins: Array) -> void:
+	for child in _my_creations_vbox.get_children():
+		child.queue_free()
+
+	if skins.is_empty():
+		_my_creations_status_label.text = "No designs yet -- make one at aevoria.space/creator/create."
+		return
+
+	_my_creations_status_label.text = "Pick one of your own designs:"
+	for skin in skins:
+		var recipe = skin.get("recipe")
+		if typeof(recipe) != TYPE_DICTIONARY:
+			continue
+		var button = Button.new()
+		var visibility_tag = "" if skin.get("is_public", true) else " (private)"
+		button.text = "%s%s" % [skin.get("title", "(untitled)"), visibility_tag]
+		button.pressed.connect(func(): _apply_owned_skin(recipe))
+		_my_creations_vbox.add_child(button)
+
+func _on_my_creations_fetch_failed(message: String) -> void:
+	_my_creations_status_label.text = message
 
 func _on_skins_fetched(purchases: Array):
 	PlayerProfile.update_from_purchases(purchases)
