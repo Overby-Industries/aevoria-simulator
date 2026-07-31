@@ -143,7 +143,7 @@ func _spawn_ship_marker() -> void:
 	# was tweened across the table. Local-space position here means it
 	# now travels with the marker for free, no per-frame sync needed.
 	var label = Label3D.new()
-	label.text = "YOUR SHIP"
+	label.text = "%s%s" % [PlayerProfile.active_ship_name, PlayerProfile.badge_suffix()]
 	label.font_size = 28
 	label.pixel_size = 0.01
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

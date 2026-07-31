@@ -25,6 +25,7 @@ func _ready():
 	AevoriaAuth.logged_out.connect(_refresh_state)
 	AevoriaAuth.skins_fetched.connect(_on_skins_fetched)
 	AevoriaAuth.skins_fetch_failed.connect(_on_skins_fetch_failed)
+	PlayerProfile.badges_updated.connect(_refresh_account_label)
 
 	_refresh_state()
 
@@ -134,11 +135,16 @@ func _refresh_state():
 	_logged_out_box.visible = not logged_in
 	_logged_in_box.visible = logged_in
 	if logged_in:
-		_account_label.text = "Logged in: %s" % AevoriaAuth.user_email
+		_refresh_account_label()
 		AevoriaAuth.fetch_owned_skins()
 	else:
 		for child in _skins_vbox.get_children():
 			child.queue_free()
+
+func _refresh_account_label():
+	if not AevoriaAuth.is_logged_in():
+		return
+	_account_label.text = "Logged in: %s%s" % [AevoriaAuth.user_email, PlayerProfile.badge_suffix()]
 
 func _on_login_pressed():
 	_status_label.text = ""
@@ -153,6 +159,7 @@ func _on_login_failed(message: String):
 	_status_label.text = message
 
 func _on_skins_fetched(purchases: Array):
+	PlayerProfile.update_from_purchases(purchases)
 	for child in _skins_vbox.get_children():
 		child.queue_free()
 	if purchases.is_empty():

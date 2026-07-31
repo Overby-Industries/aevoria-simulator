@@ -7,6 +7,16 @@ extends RefCounted
 ## work for both a 14m mining hull and a 42m industrial hauler.
 
 static func frame(camera: Camera3D, subjects: Array, direction: Vector3 = Vector3(0, 0.5, 1), margin: float = 1.3) -> void:
+	var bounds = compute_bounds(subjects)
+	camera.global_position = bounds["center"] + direction.normalized() * bounds["extent"] * margin
+	camera.look_at(bounds["center"], Vector3.UP)
+
+## Same bounding-box math as frame(), split out so callers that need to
+## re-derive a camera position on their own (e.g. assembly_bay.gd's
+## drag-to-orbit, which has to recenter on the ship's current geometry
+## every rebuild while preserving the player's own yaw/pitch/zoom) don't
+## have to duplicate the AABB walk.
+static func compute_bounds(subjects: Array) -> Dictionary:
 	var combined := AABB()
 	var has_bounds := false
 	for subject in subjects:
@@ -24,9 +34,7 @@ static func frame(camera: Camera3D, subjects: Array, direction: Vector3 = Vector
 	# .length() (the diagonal) rather than the longest single axis --
 	# generous on purpose so a ship viewed from an angle doesn't clip.
 	var extent = combined.size.length() if has_bounds else 20.0
-
-	camera.global_position = center + direction.normalized() * extent * margin
-	camera.look_at(center, Vector3.UP)
+	return {"center": center, "extent": extent}
 
 static func _collect_mesh_instances(node: Node) -> Array:
 	var result: Array = []
