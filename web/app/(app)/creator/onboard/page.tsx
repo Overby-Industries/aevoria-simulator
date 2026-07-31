@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { startCreatorOnboarding } from "../actions";
 
-export default async function CreatorOnboardPage() {
+export default async function CreatorOnboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,6 +16,8 @@ export default async function CreatorOnboardPage() {
     redirect("/login?next=/creator/onboard");
   }
 
+  const { error } = await searchParams;
+
   return (
     <main style={styles.main}>
       <form action={startCreatorOnboarding} style={styles.card}>
@@ -20,6 +26,7 @@ export default async function CreatorOnboardPage() {
           Join the Modder's Cooperative. You'll be redirected to Stripe to
           set up payouts — creators keep 85% of every sale.
         </p>
+        {error && <p style={styles.error}>{error}</p>}
         <button style={styles.button} type="submit">
           Start onboarding with Stripe
         </button>
