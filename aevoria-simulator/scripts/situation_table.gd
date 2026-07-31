@@ -30,6 +30,7 @@ const ResourceNodeCatalog = preload("res://scripts/resource_node_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 const WIDE_OFFSET = Vector3(0, 20, 9)
 const ZOOM_OFFSET = Vector3(0, 5, 2.2)
@@ -77,6 +78,7 @@ var _mine_button: Button
 var _zoom_out_button: Button
 
 func _ready():
+	add_child(LevelChrome.new())
 	_nodes = ResourceNodeCatalog.build_field(6, 4)
 	for node_data in _nodes:
 		_spawn_node(node_data)

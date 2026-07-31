@@ -12,6 +12,7 @@ extends Node3D
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 const H2O_COST: float = 10.0
 const POTABLE_WATER_YIELD: float = 6.0
@@ -26,6 +27,7 @@ var _potable_water_this_session: float = 0.0
 var _o2_this_session: float = 0.0
 
 func _ready():
+	add_child(LevelChrome.new())
 	for i in range(TANK_COUNT):
 		_spawn_tank(i)
 	_build_ui()

@@ -12,6 +12,7 @@ const CameraFraming = preload("res://scripts/camera_framing.gd")
 const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 # Part IDs that count toward the Commonwealth's VCI tracking when a ship
 # including one is saved -- see faction_home_base.gd's
@@ -46,6 +47,7 @@ var _back_button: Button
 var _active_special_effect: String = ""
 
 func _ready():
+	add_child(LevelChrome.new())
 	_catalog = PartCatalog.build_demo_catalog()
 	for part in _catalog:
 		_catalog_by_id[part.part_id] = part

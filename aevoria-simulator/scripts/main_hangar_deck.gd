@@ -24,10 +24,12 @@ extends Node3D
 
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 @onready var camera: Camera3D = $Camera3D
 
 func _ready():
+	add_child(LevelChrome.new())
 	camera.make_current()
 	_build_ui()
 

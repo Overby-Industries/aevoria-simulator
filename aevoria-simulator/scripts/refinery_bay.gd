@@ -12,6 +12,7 @@ extends Node3D
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 const RECIPES = [
 	{"name": "Smelt Gold", "input_resource": "PGM", "input_amount": 15.0, "output_resource": "Gold", "output_amount": 5.0, "glow": Color("ffd54a")},
@@ -26,6 +27,7 @@ var _recipe_buttons: Array = []
 var _produced_this_session: Dictionary = {}
 
 func _ready():
+	add_child(LevelChrome.new())
 	for i in range(RECIPES.size()):
 		_spawn_furnace(i)
 	_build_ui()
