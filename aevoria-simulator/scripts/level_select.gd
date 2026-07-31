@@ -139,32 +139,46 @@ func _build_faction_row() -> HBoxContainer:
 
 	return row
 
+## Two stacked panels, VCI on top and Commons below it -- previously one
+## panel with both sections scrolling together, which read as one long
+## list rather than two distinct things. A VBoxContainer holding both
+## PanelContainers means Godot stacks them with real spacing regardless
+## of either one's content height, instead of hand-computing a pixel
+## offset that would drift out of sync the next time either panel's
+## content changed.
 func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
-	var panel = PanelContainer.new()
-	panel.theme = ThemeBootstrap.theme
-	panel.custom_minimum_size = Vector2(360, 0)
+	var column = VBoxContainer.new()
+	column.custom_minimum_size = Vector2(360, 0)
 	# Real corner anchor (see account_panel.gd's matching comment) so this
 	# follows the window on resize/fullscreen instead of staying put at
 	# wherever the window happened to be sized at launch.
-	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
 	# The preset alone leaves grow_horizontal at its default (END, i.e.
-	# grows further right) -- for a right-docked panel that grows the
+	# grows further right) -- for a right-docked column that grows the
 	# minimum-size rect off the edge of the screen instead of leftward
 	# from the anchor. Force it explicitly.
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	column.add_theme_constant_override("separation", 12)
+	canvas.add_child(column)
+
+	_build_vci_panel(column, state)
+	_build_commons_panel(column, state)
+
+func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
+	var panel = PanelContainer.new()
+	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "GlassPanelFrame"
-	canvas.add_child(panel)
+	column.add_child(panel)
 
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	panel.add_child(bg)
 
-	# The full VCI breakdown (4 categories x several sub-measures each,
-	# plus the raw resource list) is taller than the window in a lot of
-	# cases -- same off-screen-content lesson as the level list and
-	# AssemblyBay before it: cap the panel height and scroll instead of
-	# letting it run off-screen.
+	# The full VCI breakdown (4 categories x several sub-measures each) is
+	# taller than the window in a lot of cases -- same off-screen-content
+	# lesson as the level list and AssemblyBay before it: cap the panel
+	# height and scroll instead of letting it run off-screen.
 	var scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(360, 420)
+	scroll.custom_minimum_size = Vector2(360, 340)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
 
@@ -214,7 +228,19 @@ func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
 			m_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			outer.add_child(m_label)
 
-	outer.add_child(HSeparator.new())
+func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
+	var panel = PanelContainer.new()
+	panel.theme = ThemeBootstrap.theme
+	panel.theme_type_variation = "GlassPanelFrame"
+	column.add_child(panel)
+
+	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
+	panel.add_child(bg)
+
+	var outer = VBoxContainer.new()
+	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_theme_constant_override("separation", 4)
+	panel.add_child(outer)
 
 	var resources_header = Label.new()
 	resources_header.text = "COMMONS (raw banked resources)"
@@ -228,6 +254,59 @@ func _build_resources_panel(canvas: CanvasLayer, state: Dictionary) -> void:
 	resources_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	resources_label.text = _format_resources(state["resources"])
 	outer.add_child(resources_label)
+
+	outer.add_child(HSeparator.new())
+
+	# Health meter for the two raw feedstocks everything else in the
+	# commons is refined from (see vci_tracker.gd's critical_supply_health()
+	# note on why H2O and PGM specifically) -- same color language as VCI's
+	# bands above, so a glance at either panel reads the same way, but this
+	# isn't an actual VCI sub-measure: it's a display-only early-warning
+	# meter on the two inputs, not the downstream products VCI scores.
+	var supply_header = Label.new()
+	supply_header.text = "CRITICAL SUPPLY CHAIN"
+	supply_header.add_theme_font_size_override("font_size", 12)
+	supply_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	outer.add_child(supply_header)
+
+	for entry in VCITracker.critical_supply_health(state["resources"]):
+		var row = Label.new()
+		row.text = "%s: %.0f / %.0f -- %s" % [
+			entry["resource"], entry["banked"], entry["target"], _supply_band_name(entry["pct"])]
+		row.add_theme_font_size_override("font_size", 11)
+		row.add_theme_color_override("font_color", _supply_health_color(entry["pct"]))
+		row.custom_minimum_size = Vector2(330, 0)
+		row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		outer.add_child(row)
+
+## Mirrors VitalContinuityBand's own thresholds (cur_capture_index.h:
+## 0-19 Critical, 20-39 High Risk, 40-59 Elevated, 60-79 Observation,
+## 80-100 Stable) and _band_color()'s colors for them, without spinning up
+## a CURComplianceMonitor for what's ultimately just a percentage-of-target
+## display convention.
+func _supply_band_name(pct: float) -> String:
+	if pct >= 80.0:
+		return "Stable"
+	elif pct >= 60.0:
+		return "Observation"
+	elif pct >= 40.0:
+		return "Elevated"
+	elif pct >= 20.0:
+		return "High Risk"
+	else:
+		return "Critical"
+
+func _supply_health_color(pct: float) -> Color:
+	if pct >= 80.0:
+		return Color(0.45, 0.85, 0.55)
+	elif pct >= 60.0:
+		return Color(0.6, 0.8, 0.95)
+	elif pct >= 40.0:
+		return Color(0.95, 0.75, 0.35)
+	elif pct >= 20.0:
+		return Color(0.95, 0.55, 0.3)
+	else:
+		return Color(0.95, 0.35, 0.35)
 
 ## Feeds real banked-resource state (via vci_tracker.gd's mapping) into
 ## the VCI binding added to CURComplianceMonitor. The monitor here is a
