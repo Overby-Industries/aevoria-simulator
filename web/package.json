@@ -1,6 +1,6 @@
 {
   "name": "aevoria-simulator",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "private": true,
   "description": "Aevoria Simulator — CUR-based governance and space civilization sandbox",
   "scripts": {
