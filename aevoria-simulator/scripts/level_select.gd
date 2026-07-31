@@ -17,10 +17,10 @@ const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCITracker = preload("res://scripts/vci_tracker.gd")
 
-const FACTIONS = [
-	{"id": LevelCatalog.AEVORIA_COMMONWEALTH, "label": "Commonwealth"},
-	{"id": LevelCatalog.OLIGARCH_COMBINE, "label": "Oligarch Combine"},
-	{"id": LevelCatalog.NOMAD_FLOTILLA, "label": "Nomad Flotilla"},
+const FACTION_IDS = [
+	LevelCatalog.AEVORIA_COMMONWEALTH,
+	LevelCatalog.OLIGARCH_COMBINE,
+	LevelCatalog.NOMAD_FLOTILLA,
 ]
 
 var _faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
@@ -67,7 +67,7 @@ func _build_ui() -> void:
 	scroll.add_child(outer)
 
 	var header = Label.new()
-	header.text = "%s — LEVEL SELECT" % _faction_label(_faction_id).to_upper()
+	header.text = "%s — LEVEL SELECT" % LevelCatalog.faction_label(_faction_id).to_upper()
 	outer.add_child(header)
 
 	outer.add_child(_build_faction_row())
@@ -100,12 +100,6 @@ func _build_ui() -> void:
 
 	_build_resources_panel(canvas, state)
 
-static func _faction_label(faction_id: String) -> String:
-	for faction in FACTIONS:
-		if faction["id"] == faction_id:
-			return faction["label"]
-	return faction_id
-
 ## Row of buttons for switching which faction the player is browsing/
 ## playing as -- a real gameplay feature in every build, not just debug
 ## ones, since it's what makes the level roster below actually faction-
@@ -123,16 +117,16 @@ func _build_faction_row() -> HBoxContainer:
 	label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.95))
 	row.add_child(label)
 
-	for faction in FACTIONS:
+	for faction_id_option in FACTION_IDS:
 		var button = Button.new()
-		button.text = faction["label"]
+		button.text = LevelCatalog.faction_label(faction_id_option)
 		button.theme_type_variation = "GlassButton"
 		button.add_theme_font_size_override("font_size", 10)
-		button.disabled = faction["id"] == _faction_id
-		var faction_id = faction["id"]
+		button.disabled = faction_id_option == _faction_id
+		var faction_id = faction_id_option
 		button.pressed.connect(func():
 			LevelContext.faction_override = faction_id
-			SystemLog.log("Switched faction to %s." % _faction_label(faction_id))
+			SystemLog.log("Switched faction to %s." % LevelCatalog.faction_label(faction_id))
 			get_tree().reload_current_scene()
 		)
 		row.add_child(button)

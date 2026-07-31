@@ -11,6 +11,7 @@ const PartCatalog = preload("res://scripts/part_catalog.gd")
 const CameraFraming = preload("res://scripts/camera_framing.gd")
 const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const LevelCatalog = preload("res://scripts/level_catalog.gd")
 
 # Part IDs that count toward the Commonwealth's VCI tracking when a ship
 # including one is saved -- see faction_home_base.gd's
@@ -502,13 +503,19 @@ func _on_save_pressed():
 		_finish_button.visible = true
 
 ## Distinct saved ships that include a habitat or power part count toward
-## the Commonwealth's Vital Continuity Index -- see the constants above
+## the building faction's Vital Continuity Index -- see the constants above
 ## and docs/VCI_TRACKING.md. Deduped by ship_id (FactionHomeBase's job),
 ## so tweaking and re-saving the same ship doesn't inflate the count.
+## LevelCatalog._faction_label() names the log lines rather than hardcoding
+## "Commonwealth" -- the Assembly Bay is shared by all three factions'
+## catalog entries (Prospector Run/Combine Fabrication Yard/Flotilla Refit
+## Deck all point at this same scene), so the grid a Tube Rocket Hull's
+## power source feeds is the Combine's, not the Commonwealth's.
 func _record_infrastructure() -> void:
 	var faction_id = LevelContext.current_faction_id
 	if faction_id == "":
 		return
+	var faction_label = LevelCatalog.faction_label(faction_id)
 	var part_ids: Array = [_blueprint.root_part_id]
 	for attachment in _blueprint.attachments:
 		part_ids.append(attachment["part_id"])
@@ -518,10 +525,10 @@ func _record_infrastructure() -> void:
 		SystemLog.log("Shelter registered: %s now provides habitat capacity." % _blueprint.ship_id)
 	if part_ids.has(POWER_PART_ID):
 		FactionHomeBase.mark_infrastructure_built(faction_id, "power", _blueprint.ship_id)
-		SystemLog.log("Power source registered: %s now feeds the Commonwealth grid." % _blueprint.ship_id)
+		SystemLog.log("Power source registered: %s now feeds the %s grid." % [_blueprint.ship_id, faction_label])
 	if part_ids.has(SANITATION_PART_ID):
 		FactionHomeBase.mark_infrastructure_built(faction_id, "sanitation", _blueprint.ship_id)
-		SystemLog.log("Sanitation registered: %s now processes Commonwealth waste." % _blueprint.ship_id)
+		SystemLog.log("Sanitation registered: %s now processes %s waste." % [_blueprint.ship_id, faction_label])
 	if part_ids.has(HEALTHCARE_PART_ID):
 		FactionHomeBase.mark_infrastructure_built(faction_id, "healthcare", _blueprint.ship_id)
 		SystemLog.log("Healthcare registered: %s now provides medical capacity." % _blueprint.ship_id)

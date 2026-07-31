@@ -17,6 +17,18 @@ const AEVORIA_COMMONWEALTH = "aevoria_commonwealth"
 const OLIGARCH_COMBINE = "oligarch_combine"
 const NOMAD_FLOTILLA = "nomad_flotilla"
 
+const FACTION_LABELS = {
+	AEVORIA_COMMONWEALTH: "Commonwealth",
+	OLIGARCH_COMBINE: "Oligarch Combine",
+	NOMAD_FLOTILLA: "Nomad Flotilla",
+}
+
+## Single source of truth for display names -- level_select.gd's faction
+## switcher and assembly_bay.gd's shared-scene log lines both read off
+## this instead of keeping their own copies in sync by hand.
+static func faction_label(faction_id: String) -> String:
+	return FACTION_LABELS.get(faction_id, faction_id)
+
 static func build_levels() -> Array:
 	return [
 		{
@@ -50,6 +62,22 @@ static func build_levels() -> Array:
 			"title": "The Standing Review",
 			"objective": "Watch what happens when a routine restriction review is never filed -- CUR-H.7 §7.12(c)(3)/(d), the built-in test no guard could catch.",
 			"scene_path": "res://scenes/ObligationLevel.tscn",
+		},
+		{
+			"id": "oligarch_fabrication_yard",
+			"kind": Kind.EXTRACTION,
+			"faction_id": OLIGARCH_COMBINE,
+			"title": "Combine Fabrication Yard",
+			"objective": "Assemble a mining ship in the Assembly Bay -- attach a drill arm and a thruster to the Tube Rocket Hull, the Combine's own faction-exclusive hull -- then save it.",
+			"scene_path": "res://scenes/AssemblyBay.tscn",
+		},
+		{
+			"id": "nomad_refit_deck",
+			"kind": Kind.EXTRACTION,
+			"faction_id": NOMAD_FLOTILLA,
+			"title": "Flotilla Refit Deck",
+			"objective": "Assemble a mining ship in the Assembly Bay -- attach a drill arm and a thruster to the Drift Hull, the Flotilla's own faction-exclusive hull -- then save it.",
+			"scene_path": "res://scenes/AssemblyBay.tscn",
 		},
 		{
 			"id": "oligarch_boardroom_capture",
