@@ -1,21 +1,19 @@
 extends RefCounted
 
-## The starting level roster -- deliberately just two, one per activity
-## type, per the "start small" call: build hardware (Overby Industries,
-## dark console theme) vs. handle governance (Aevoria Commonwealth, flat
-## civil theme). Both belong to the Commonwealth's one faction for now;
-## faction_id is already plumbed through FactionHomeBase/LevelContext so
-## adding more factions later is just more catalog entries, not a new
-## system.
+## The level roster. Started as just two Commonwealth levels (build
+## hardware vs. handle governance) and has grown a level per faction beyond
+## that -- faction_id is plumbed through FactionHomeBase/LevelContext, so
+## each faction's levels are just more catalog entries, not a new system.
+## See docs/FACTIONS.md for why the Combine and Flotilla each get a
+## structurally different mechanic (Capture Risk vs. Vital Continuity)
+## instead of a reskinned copy of the Commonwealth's.
 
 enum Kind { EXTRACTION, GOVERNANCE, PRODUCTION }
 
 const AEVORIA_COMMONWEALTH = "aevoria_commonwealth"
 
-# The other two factions from the user's sketch -- no levels or home bases
-# of their own yet (that's the later "spheres of influence" pass), but
-# part_catalog.gd's faction-exclusive hulls need canonical ids to gate
-# against now, and this is the single place faction ids are defined.
+# Not Commonwealth citizens -- see docs/FACTIONS.md. Also the canonical
+# ids part_catalog.gd's faction-exclusive hulls gate against.
 const OLIGARCH_COMBINE = "oligarch_combine"
 const NOMAD_FLOTILLA = "nomad_flotilla"
 

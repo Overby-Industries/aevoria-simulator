@@ -14,14 +14,16 @@ var current_level_id: String = ""
 var current_faction_id: String = ""
 
 ## Debug-build-only escape hatch (see level_select.gd's debug faction
-## switcher) so a developer can actually reach the Oligarch Combine/Nomad
-## Flotilla exclusive hulls in part_catalog.gd for testing/demos --
-## content that's real (three faction-exclusive hulls already exist) but
-## unreachable in a normal playthrough today, since every level in
-## level_catalog.gd is currently flagged Commonwealth-only. Empty string
-## means "no override, use the level's own faction_id" -- the untouched,
-## shipped behavior. Survives a scene reload (that's the whole point --
-## an ordinary var reset on every LevelSelect._ready() wouldn't).
+## switcher) so a developer can play any level -- including the
+## Commonwealth-only ones like Assembly Bay/Asteroid Field -- as the
+## Oligarch Combine or Nomad Flotilla for testing/demos. Boardroom Capture
+## and The Long Drift are already faction-flagged in level_catalog.gd and
+## reachable without this in a normal build; this override is for
+## reaching the other factions' exclusive hulls (part_catalog.gd) inside
+## levels that are still Commonwealth-only. Empty string means "no
+## override, use the level's own faction_id" -- the untouched, shipped
+## behavior. Survives a scene reload (that's the whole point -- an
+## ordinary var reset on every LevelSelect._ready() wouldn't).
 var debug_faction_override: String = ""
 
 func start_level(level_id: String, faction_id: String) -> void:
