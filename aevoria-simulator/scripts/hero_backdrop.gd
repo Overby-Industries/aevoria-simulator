@@ -12,6 +12,7 @@ extends Node3D
 ## this: the panels blur *this* scene, not a flat color.
 
 const Starfield = preload("res://scripts/starfield.gd")
+const SpaceEnvironment = preload("res://scripts/space_environment.gd")
 
 const COLOR_HULL = Color("1c2a45")
 const COLOR_AMBER = Color("ff9f1c")
@@ -86,24 +87,7 @@ func _process(delta: float) -> void:
 	_update_lens_flare()
 
 func _build_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	# Near-black, not pure black -- a hair of blue keeps it from reading
-	# as a broken/transparent viewport.
-	env.background_color = Color(0.006, 0.007, 0.012)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.04, 0.045, 0.06)
-	env.ambient_light_energy = 0.5
-	# Glow/bloom is what makes the sun's emissive sphere actually read as
-	# a glare instead of a flat bright dot -- the other "lens flare" half
-	# is the hand-placed 2D ghost sprites in _build_lens_flare/_update_lens_flare.
-	env.glow_enabled = true
-	env.glow_intensity = 1.6
-	env.glow_bloom = 0.35
-	env.glow_hdr_threshold = 1.0
-	var world_env := WorldEnvironment.new()
-	world_env.environment = env
-	add_child(world_env)
+	add_child(SpaceEnvironment.build())
 
 func _build_camera() -> void:
 	_camera = Camera3D.new()

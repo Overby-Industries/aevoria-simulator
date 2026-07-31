@@ -37,6 +37,7 @@ func _ready() -> void:
 	# the "Admire" button below reopens it any time after this first look.
 	_founders_monument = FoundersMonument.new()
 	add_child(_founders_monument)
+	_build_situation_view_button()
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -99,6 +100,49 @@ func _build_ui() -> void:
 	outer.add_child(monument_button)
 
 	add_child(VCICommonsPanel.new(_faction_id))
+
+## A standalone panel, separate from the level-roster card list, docked
+## near the bottom-center of the screen -- roughly below where
+## HeroBackdrop's fixed camera frames the torus station (hero_backdrop.gd
+## never moves its camera, so a hand-placed screen position is stable
+## here the same way SUN_POSITION is hand-placed there). This is the
+## user's requested "click here for solar system table" entry point;
+## there's no raycast/Area3D picking anywhere in this codebase to make
+## the torus mesh itself clickable, so a button is the consistent choice.
+func _build_situation_view_button() -> void:
+	var canvas = CanvasLayer.new()
+	add_child(canvas)
+
+	var panel = PanelContainer.new()
+	panel.theme = ThemeBootstrap.theme
+	panel.theme_type_variation = "GlassPanelFrame"
+	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	panel.position = Vector2(-190, -160)
+	canvas.add_child(panel)
+
+	var panel_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
+	panel.add_child(panel_bg)
+
+	var inner = VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 4)
+	panel.add_child(inner)
+
+	var label = Label.new()
+	label.text = "Click here for the Solar System Table -- expand and view sectors"
+	label.add_theme_font_size_override("font_size", 11)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(360, 0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inner.add_child(label)
+
+	var button = Button.new()
+	button.text = "Solar System Table"
+	button.theme_type_variation = "GlassButton"
+	button.pressed.connect(func():
+		LevelContext.start_level("situation_view", _faction_id)
+		get_tree().change_scene_to_file("res://scenes/SituationView.tscn")
+	)
+	inner.add_child(button)
 
 ## Row of buttons for switching which faction the player is browsing/
 ## playing as -- a real gameplay feature in every build, not just debug

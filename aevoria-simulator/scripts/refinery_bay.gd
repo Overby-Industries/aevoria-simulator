@@ -18,6 +18,8 @@ const RECIPES = [
 	{"name": "Smelt Gold", "input_resource": "PGM", "input_amount": 15.0, "output_resource": "Gold", "output_amount": 5.0, "glow": Color("ffd54a")},
 	{"name": "Smelt Platinum", "input_resource": "PGM", "input_amount": 15.0, "output_resource": "Platinum", "output_amount": 8.0, "glow": Color("d8e4ea")},
 	{"name": "Smelt Steel", "input_resource": "PGM", "input_amount": 10.0, "output_resource": "Steel", "output_amount": 12.0, "glow": Color("ff7a3d")},
+	{"name": "Cure UHPC Concrete", "input_resource": "Regolith", "input_amount": 20.0, "output_resource": "UHPC Concrete", "output_amount": 10.0, "glow": Color("a68a5f")},
+	{"name": "Press Shield Plating", "input_resource": "Regolith", "input_amount": 20.0, "output_resource": "Shield Plating", "output_amount": 8.0, "glow": Color("8fd6e6")},
 ]
 
 @onready var camera: Camera3D = $Camera3D
@@ -132,17 +134,27 @@ func _make_glass_background(tint: Color) -> ColorRect:
 
 func _refresh():
 	var state = FactionHomeBase.load_state(LevelContext.current_faction_id)
-	var pgm = float(state["resources"].get("PGM", 0.0))
 
-	var lines = ["Commons -- PGM: %.1f" % pgm]
+	# One stockpile line per distinct input resource across all recipes
+	# (used to be PGM-only before Regolith-fed recipes existed alongside
+	# the PGM-fed ones).
+	var input_resources: Array = []
+	for recipe in RECIPES:
+		if not input_resources.has(recipe["input_resource"]):
+			input_resources.append(recipe["input_resource"])
+	var lines = []
+	for resource_name in input_resources:
+		lines.append("Commons -- %s: %.1f" % [resource_name, float(state["resources"].get(resource_name, 0.0))])
 	var produced_keys = _produced_this_session.keys()
 	produced_keys.sort()
 	for key in produced_keys:
-		lines.append("Smelted this visit: %.1f %s" % [float(_produced_this_session[key]), key])
+		lines.append("Produced this visit: %.1f %s" % [float(_produced_this_session[key]), key])
 	_resources_label.text = "\n".join(lines)
 
 	for i in range(RECIPES.size()):
-		_recipe_buttons[i].disabled = pgm < RECIPES[i]["input_amount"]
+		var recipe = RECIPES[i]
+		var have = float(state["resources"].get(recipe["input_resource"], 0.0))
+		_recipe_buttons[i].disabled = have < recipe["input_amount"]
 
 func _on_smelt_pressed(recipe_index: int):
 	var recipe = RECIPES[recipe_index]
