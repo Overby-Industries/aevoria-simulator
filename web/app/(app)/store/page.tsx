@@ -57,7 +57,7 @@ export default async function StorePage() {
                 ? `$${(item.amount / 100).toFixed(2)} ${item.currency.toUpperCase()}`
                 : "—"}
             </p>
-            <form action={createCheckoutSession}>
+            <form action={createCheckoutSession} style={styles.buttonForm}>
               <input type="hidden" name="priceId" value={item.priceId} />
               <button style={styles.button} type="submit">
                 Buy
@@ -90,6 +90,14 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
   },
   card: {
+    // CSS grid items stretch to the tallest item in their row by default,
+    // but that only sets the *card's* height -- without height: "100%"
+    // here the card's own content still only takes up as much room as it
+    // needs, so a short-description card's Buy button sat higher than a
+    // long-description card's. height: 100% + flex column + the button's
+    // marginTop: "auto" below is what actually pins Buy to the bottom of
+    // every card regardless of description length.
+    height: "100%",
     background: "#14181f",
     border: "1px solid #2a2f3a",
     borderRadius: "12px",
@@ -102,6 +110,11 @@ const styles: Record<string, React.CSSProperties> = {
   itemName: { margin: 0, fontSize: "1.1rem" },
   desc: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
   price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0" },
+  // marginTop: "auto" on the flex-column card's last child pushes it (and
+  // only it) down to the bottom of the card, regardless of how tall the
+  // description above it is -- this is the actual bottom-alignment fix,
+  // not the button style below (the button fills its form, not the card).
+  buttonForm: { marginTop: "auto" },
   button: {
     padding: "10px 12px",
     borderRadius: "6px",
