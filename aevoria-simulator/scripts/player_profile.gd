@@ -21,6 +21,7 @@ const PROFILE_PATH = "user://player_profile.json"
 const DEFAULT_SHIP_NAME = "MyShip"
 
 signal badges_updated
+signal ship_name_updated
 
 var is_paid: bool = false
 var is_founder: bool = false
@@ -51,6 +52,7 @@ func set_active_ship_name(ship_name: String) -> void:
 	var trimmed = ship_name.strip_edges()
 	active_ship_name = trimmed if not trimmed.is_empty() else DEFAULT_SHIP_NAME
 	_save()
+	ship_name_updated.emit()
 
 func _load() -> void:
 	if not FileAccess.file_exists(PROFILE_PATH):

@@ -7,6 +7,7 @@ extends CanvasLayer
 ## the bottom-right of the screen; the game's Exit button lives here too.
 
 const GlassPanel = preload("res://scripts/glass_panel.gd")
+const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
 
 var _panel: PanelContainer
 var _logged_out_box: VBoxContainer
@@ -15,7 +16,9 @@ var _email_input: LineEdit
 var _password_input: LineEdit
 var _status_label: Label
 var _account_label: Label
+var _ship_name_label: Label
 var _skins_vbox: VBoxContainer
+var _badges_vbox: VBoxContainer
 
 func _ready():
 	_build_ui()
@@ -26,6 +29,7 @@ func _ready():
 	AevoriaAuth.skins_fetched.connect(_on_skins_fetched)
 	AevoriaAuth.skins_fetch_failed.connect(_on_skins_fetch_failed)
 	PlayerProfile.badges_updated.connect(_refresh_account_label)
+	PlayerProfile.ship_name_updated.connect(_refresh_ship_name_label)
 
 	_refresh_state()
 
@@ -92,11 +96,27 @@ func _build_ui():
 	_account_label.add_theme_font_size_override("font_size", 12)
 	_logged_in_box.add_child(_account_label)
 
+	# Read-only here -- the ship's actual name is set in the Assembly Bay's
+	# Ship Name field (PlayerProfile.set_active_ship_name()); this just
+	# reflects it so a player's personalization is visible from their
+	# account panel too, on every level (level_chrome.gd), not just there.
+	_ship_name_label = Label.new()
+	_ship_name_label.add_theme_font_size_override("font_size", 11)
+	_ship_name_label.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95))
+	_logged_in_box.add_child(_ship_name_label)
+
+	_logged_in_box.add_child(HSeparator.new())
+
+	var inventory_header = Label.new()
+	inventory_header.text = "INVENTORY"
+	inventory_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	_logged_in_box.add_child(inventory_header)
+
 	var skins_header_row = HBoxContainer.new()
 	_logged_in_box.add_child(skins_header_row)
 
 	var skins_header = Label.new()
-	skins_header.text = "MY SKINS"
+	skins_header.text = "SKINS"
 	skins_header.add_theme_font_size_override("font_size", 12)
 	skins_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	skins_header_row.add_child(skins_header)
@@ -114,6 +134,18 @@ func _build_ui():
 	_skins_vbox = VBoxContainer.new()
 	_skins_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	skins_scroll.add_child(_skins_vbox)
+
+	var badges_header = Label.new()
+	badges_header.text = "BADGES & PERKS"
+	badges_header.add_theme_font_size_override("font_size", 12)
+	_logged_in_box.add_child(badges_header)
+
+	var badges_scroll = ScrollContainer.new()
+	badges_scroll.custom_minimum_size = Vector2(0, 60)
+	_logged_in_box.add_child(badges_scroll)
+	_badges_vbox = VBoxContainer.new()
+	_badges_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	badges_scroll.add_child(_badges_vbox)
 
 	var logout_button = Button.new()
 	logout_button.text = "Log Out"
@@ -136,15 +168,21 @@ func _refresh_state():
 	_logged_in_box.visible = logged_in
 	if logged_in:
 		_refresh_account_label()
+		_refresh_ship_name_label()
 		AevoriaAuth.fetch_owned_skins()
 	else:
 		for child in _skins_vbox.get_children():
+			child.queue_free()
+		for child in _badges_vbox.get_children():
 			child.queue_free()
 
 func _refresh_account_label():
 	if not AevoriaAuth.is_logged_in():
 		return
 	_account_label.text = "Logged in: %s%s" % [AevoriaAuth.user_email, PlayerProfile.badge_suffix()]
+
+func _refresh_ship_name_label():
+	_ship_name_label.text = "Ship: %s" % PlayerProfile.active_ship_name
 
 func _on_login_pressed():
 	_status_label.text = ""
@@ -160,6 +198,7 @@ func _on_login_failed(message: String):
 
 func _on_skins_fetched(purchases: Array):
 	PlayerProfile.update_from_purchases(purchases)
+	_refresh_badges_ui(purchases)
 	for child in _skins_vbox.get_children():
 		child.queue_free()
 	if purchases.is_empty():
@@ -208,6 +247,52 @@ func _on_skins_fetched(purchases: Array):
 
 func _on_skins_fetch_failed(message: String):
 	_status_label.text = message
+
+## Distinct from _on_skins_fetched's equip-picker list (that one only shows
+## Tier 2 marketplace/recipe skins and Tier1SkinCatalog-known store items) --
+## this reads the same purchases array for anything account-wide: the
+## PATRON/FOUNDER badge PlayerProfile already computed, plus any per-pack
+## cosmetic perk (decal/special effect) a Tier 1 purchase unlocks, so a
+## paying player can see what their purchase actually earned them without
+## having to open the Assembly Bay and page through the skin picker first.
+func _refresh_badges_ui(purchases: Array) -> void:
+	for child in _badges_vbox.get_children():
+		child.queue_free()
+
+	var lines: Array = []
+	if PlayerProfile.is_founder:
+		lines.append("★ Founding Citizen -- name etched on the Founders Monument")
+	elif PlayerProfile.is_paid:
+		lines.append("✦ Patron -- thank you for supporting the Commonwealth")
+
+	for purchase in purchases:
+		var product_name = purchase.get("product_name")
+		if product_name == null:
+			continue
+		var reward = Tier1SkinCatalog.get_reward(product_name)
+		if reward.is_empty():
+			continue
+		if not reward.get("decal_path", "").is_empty():
+			lines.append("- %s: decal unlocked" % product_name)
+		if not reward.get("special_effect", "").is_empty():
+			lines.append("- %s: %s effect unlocked" % [product_name, reward["special_effect"].replace("_", " ")])
+
+	if lines.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "(no badges yet -- purchases in the Heritage Fleet Store unlock these)"
+		empty_label.add_theme_font_size_override("font_size", 11)
+		empty_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_badges_vbox.add_child(empty_label)
+		return
+
+	for line in lines:
+		var label = Label.new()
+		label.text = line
+		label.add_theme_font_size_override("font_size", 11)
+		label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.4))
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_badges_vbox.add_child(label)
 
 # The "skins" storage bucket is private (see 0001_init.sql), so a plain
 # public URL won't work -- has to go through Supabase's sign endpoint
