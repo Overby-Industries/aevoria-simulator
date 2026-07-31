@@ -29,12 +29,31 @@ extends Node3D
 const ResourceNodeCatalog = preload("res://scripts/resource_node_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const LevelCatalog = preload("res://scripts/level_catalog.gd")
 
 const WIDE_OFFSET = Vector3(0, 20, 9)
 const ZOOM_OFFSET = Vector3(0, 5, 2.2)
 const TRAVEL_SECONDS = 2.2
 const CAMERA_MOVE_SECONDS = 0.6
 const HOME_POSITION = Vector3(0, 0.3, 10.0)
+
+## Table-icon stand-ins for each faction's real Assembly Bay hull
+## (part_catalog.gd) -- SimpleShapes only knows box/cylinder/capsule/sphere,
+## not the C++-side PartAssembler's composite "winged_fuselage" the SSTO
+## hull actually uses, so the Commonwealth's marker approximates it with a
+## capsule (a sleek fuselage silhouette) rather than literally reproducing
+## the wings. The Combine's tube_rocket_hull_mk1 and the Flotilla's
+## drift_hull_mk1 are already SimpleShapes-native primitives (cylinder/box
+## respectively), so those two are exact shape matches, just at icon
+## scale. Colors are each hull's HULL_SKIN_SUGGESTIONS highlight_color.
+static func _ship_marker_spec(faction_id: String) -> Dictionary:
+	match faction_id:
+		LevelCatalog.OLIGARCH_COMBINE:
+			return {"shape": "cylinder", "radius": 0.28, "height": 0.85, "color": "b8862b"}
+		LevelCatalog.NOMAD_FLOTILLA:
+			return {"shape": "box", "size": Vector3(0.45, 0.35, 1.0), "color": "c9a227"}
+		_:
+			return {"shape": "capsule", "radius": 0.22, "height": 0.9, "color": "ffffff"}
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -104,22 +123,31 @@ func _spawn_node(node_data: Dictionary) -> void:
 	_label_by_id[node_data["id"]] = label
 
 func _spawn_ship_marker() -> void:
-	_ship_marker = SimpleShapes.make_mesh_instance({
-		"shape": "box", "size": Vector3(0.5, 0.3, 0.8),
-		"emission_color": Color("6fffb0"), "emission_energy": 0.6,
-	})
+	var spec = _ship_marker_spec(LevelContext.current_faction_id)
+	var recipe = {"shape": spec["shape"], "emission_color": Color(spec["color"]), "emission_energy": 0.6}
+	if spec.has("size"):
+		recipe["size"] = spec["size"]
+	if spec.has("radius"):
+		recipe["radius"] = spec["radius"]
+		recipe["height"] = spec["height"]
+
+	_ship_marker = SimpleShapes.make_mesh_instance(recipe)
 	_ship_marker.name = "ShipMarker"
 	_ship_marker.position = HOME_POSITION
 	add_child(_ship_marker)
 
+	# Child of the marker, not a sibling at a fixed world position -- a
+	# label added to `self` never moved when _ship_marker's own position
+	# was tweened across the table. Local-space position here means it
+	# now travels with the marker for free, no per-frame sync needed.
 	var label = Label3D.new()
 	label.text = "YOUR SHIP"
 	label.font_size = 28
 	label.pixel_size = 0.01
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.position = HOME_POSITION + Vector3(0, 0.7, 0)
-	label.modulate = Color("6fffb0")
-	add_child(label)
+	label.position = Vector3(0, 0.7, 0)
+	label.modulate = Color(spec["color"])
+	_ship_marker.add_child(label)
 
 func _build_ui():
 	var canvas = CanvasLayer.new()
