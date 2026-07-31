@@ -22,7 +22,12 @@ $BuildDir = Join-Path $PSScriptRoot "builds\windows-release"
 $BuildExe = Join-Path $BuildDir "AevoriaSimulator.exe"
 
 Write-Host "Exporting release build..."
-& $GodotExe --headless --export-release "Windows Desktop" $BuildExe
+# --path is required explicitly -- Godot has no project-discovery fallback,
+# so this only "worked" before by accident of whatever directory the caller
+# happened to already be in. $PSScriptRoot is this script's own directory
+# (aevoria-simulator/), which is always the project root regardless of
+# where the script is invoked from.
+& $GodotExe --headless --path $PSScriptRoot --export-release "Windows Desktop" $BuildExe
 if ($LASTEXITCODE -ne 0) { throw "Godot export failed with exit code $LASTEXITCODE" }
 
 # Godot's export only ever writes the .exe/.dll -- copy this in every time
@@ -31,6 +36,21 @@ if ($LASTEXITCODE -ne 0) { throw "Godot export failed with exit code $LASTEXITCO
 # executable itself now has a real icon as of the Ascending Arc emblem
 # commit, but Windows still won't put a shortcut anywhere on its own).
 Copy-Item (Join-Path $PSScriptRoot "packaging\Create Desktop Shortcut.bat") $BuildDir -Force
+
+function Get-LiveBuildId {
+    $statusJson = & $ButlerExe status $ItchTarget.Split(":")[0] --json 2>$null | Select-String '"type":"result"'
+    if (-not $statusJson) { return $null }
+    $status = ($statusJson | Select-Object -Last 1).ToString() | ConvertFrom-Json
+    return ($status.value.channels | Where-Object { $_.name -eq "windows" }).head
+}
+
+# Recorded BEFORE the push, so the post-push poll below has something to
+# compare against -- `butler status` right after a push can still return the
+# PREVIOUS build for a few seconds while itch.io finishes processing the new
+# one ("Build is now processing, should be up in a bit" is not a formality).
+# A one-shot status read here previously silently re-stamped the repo with
+# the build number that was already live, one push behind.
+$beforeBuild = Get-LiveBuildId
 
 Write-Host "Pushing to itch.io ($ItchTarget)..."
 & $ButlerExe push $BuildDir $ItchTarget
@@ -42,12 +62,23 @@ if ($LASTEXITCODE -ne 0) { throw "butler push failed with exit code $LASTEXITCOD
 # etc.) -- see sync_version.ps1 at the repo root for the exact file list.
 # This intentionally reads it back from `butler status` rather than trusting
 # a locally-incremented counter, since butler is the actual source of truth
-# for "what build is live."
-Write-Host "Syncing repo version numbers to the new itch build..."
-$statusJson = & $ButlerExe status $ItchTarget.Split(":")[0] --json 2>$null | Select-String '"type":"result"'
-if (-not $statusJson) { throw "Could not read butler status to determine the new build number." }
-$status = ($statusJson | Select-Object -Last 1).ToString() | ConvertFrom-Json
-$buildNumber = ($status.value.channels | Where-Object { $_.name -eq "windows" }).head.version
+# for "what build is live." Polls until the head build id actually changes
+# (or times out), rather than trusting the first response.
+Write-Host "Waiting for itch.io to finish processing the new build..."
+$build = $null
+for ($i = 0; $i -lt 20; $i++) {
+    $build = Get-LiveBuildId
+    if ($build -and (-not $beforeBuild -or $build.id -ne $beforeBuild.id)) { break }
+    Start-Sleep -Seconds 3
+}
+if (-not $build -or ($beforeBuild -and $build.id -eq $beforeBuild.id)) {
+    throw "Timed out waiting for the new build to appear in butler status -- version numbers NOT synced. Re-run sync_version.ps1 by hand once 'butler status $($ItchTarget.Split(':')[0])' shows the new build."
+}
+if ($build.state -ne "completed") {
+    Write-Host "Warning: new build $($build.id) is still in state '$($build.state)', not 'completed' -- proceeding anyway since the version number itself won't change further."
+}
+$buildNumber = $build.version
+Write-Host "Syncing repo version numbers to build #$buildNumber..."
 powershell -File (Join-Path $PSScriptRoot "..\sync_version.ps1") -BuildNumber $buildNumber
 if ($LASTEXITCODE -ne 0) { throw "sync_version.ps1 failed with exit code $LASTEXITCODE" }
 
