@@ -2,13 +2,27 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createCheckoutSession } from "./actions";
 
+// Real purchasing stays disabled on Production until the catalog is
+// finalized and a refund flow exists. VERCEL_ENV is "production" only on
+// the Production deployment (main branch); it's "preview" on the dev
+// branch's deployment and unset in local `npm run dev`, so both of those
+// still get a working test button -- same Stripe test/live key split as
+// everywhere else in this app, so a test-branch click never touches real
+// money regardless of this flag.
+const PURCHASES_LIVE = process.env.VERCEL_ENV !== "production";
+
 // Without this, Next.js has no reason to treat this page as dynamic (no
 // cookies/auth touched here) and will prerender it once at build time —
 // freezing the product list until the next deploy, even if prices or
 // availability change in Stripe.
 export const dynamic = "force-dynamic";
 
-export default async function StorePage() {
+export default async function StorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const prices = await getStripe().prices.list({
     active: true,
     expand: ["data.product"],
@@ -43,6 +57,7 @@ export default async function StorePage() {
   return (
     <main style={styles.main}>
       <h1 style={styles.heading}>Heritage Fleet Store</h1>
+      {error && <p style={styles.error}>{error}</p>}
       <div style={styles.grid}>
         {items.map((item) => (
           <div key={item.priceId} style={styles.card}>
@@ -57,12 +72,18 @@ export default async function StorePage() {
                 ? `$${(item.amount / 100).toFixed(2)} ${item.currency.toUpperCase()}`
                 : "—"}
             </p>
-            <form action={createCheckoutSession}>
-              <input type="hidden" name="priceId" value={item.priceId} />
-              <button style={styles.button} type="submit">
-                Buy
+            {PURCHASES_LIVE ? (
+              <form action={createCheckoutSession}>
+                <input type="hidden" name="priceId" value={item.priceId} />
+                <button style={styles.button} type="submit">
+                  Buy (TEST)
+                </button>
+              </form>
+            ) : (
+              <button style={styles.buttonDisabled} type="button" disabled>
+                Coming soon
               </button>
-            </form>
+            )}
           </div>
         ))}
         {items.length === 0 && (
@@ -81,7 +102,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "system-ui, sans-serif",
     padding: "48px 24px",
   },
-  heading: { textAlign: "center", marginBottom: "32px" },
+  heading: { textAlign: "center", marginBottom: "8px" },
+  error: {
+    textAlign: "center",
+    color: "#e2786b",
+    fontSize: "0.9rem",
+    marginBottom: "24px",
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -125,6 +152,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     fontSize: "1rem",
     cursor: "pointer",
+    width: "100%",
+  },
+  buttonDisabled: {
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "1px solid #2a2f3a",
+    background: "#1c222c",
+    color: "#6d7482",
+    fontSize: "1rem",
+    cursor: "not-allowed",
     width: "100%",
   },
 };

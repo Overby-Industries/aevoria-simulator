@@ -9,9 +9,13 @@ import { createClient } from "@/lib/supabase/server";
 // processing fee comes out of the platform's 15% cut, not the creator's.
 const PLATFORM_FEE_RATE = 0.15;
 
+function errorRedirect(message: string): never {
+  redirect("/marketplace?error=" + encodeURIComponent(message));
+}
+
 export async function createSkinCheckoutSession(formData: FormData) {
   const skinId = formData.get("skinId") as string;
-  if (!skinId) throw new Error("Missing skinId");
+  if (!skinId) errorRedirect("Missing item.");
 
   const supabase = await createClient();
   const {
@@ -30,12 +34,18 @@ export async function createSkinCheckoutSession(formData: FormData) {
     .eq("id", skinId)
     .single();
 
+  // These used to be bare throw new Error(...) calls -- an uncaught throw
+  // in a server action hits Next.js's generic error boundary, which shows
+  // no detail on a deployed build (same failure mode as the Stripe Connect
+  // onboarding bug fixed earlier). "Buy" appearing to do nothing was
+  // exactly this: e.g. a creator clicking Buy on their own listing hit the
+  // creator_id === user.id check below and threw, silently.
   if (!skin || skin.status !== "approved" || !skin.stripe_price_id) {
-    throw new Error("This item isn't available for purchase.");
+    errorRedirect("This item isn't available for purchase.");
   }
 
   if (skin.creator_id === user.id) {
-    throw new Error("You can't buy your own listing.");
+    errorRedirect("You can't buy your own listing -- it's already yours. Find it under \"My Creations\" in the Assembly Bay, no purchase needed.");
   }
 
   const { data: creatorProfile } = await supabase
@@ -45,7 +55,7 @@ export async function createSkinCheckoutSession(formData: FormData) {
     .single();
 
   if (!creatorProfile?.stripe_connect_account_id) {
-    throw new Error("This creator hasn't finished payout setup yet.");
+    errorRedirect("This creator hasn't finished payout setup yet.");
   }
 
   // Compute the fee from the frozen Stripe Price's actual amount, not the
@@ -78,7 +88,7 @@ export async function createSkinCheckoutSession(formData: FormData) {
   });
 
   if (!session.url) {
-    throw new Error("Stripe did not return a checkout URL.");
+    errorRedirect("Stripe did not return a checkout URL.");
   }
 
   redirect(session.url);

@@ -3,13 +3,26 @@ import { createSkinCheckoutSession } from "./actions";
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
 
-export default async function MarketplacePage() {
+// See store/page.tsx for the full rationale -- same flag, same reasoning.
+const PURCHASES_LIVE = process.env.VERCEL_ENV !== "production";
+
+export default async function MarketplacePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const supabase = await createClient();
 
+  // is_public = true matters now that auto-approve means EVERY submission
+  // (public or private/personal-use) reaches status = 'approved' -- without
+  // this filter, a creator's private skins would leak onto the public
+  // listing instead of staying "just for you" (see 0008's migration note).
   const { data: skins } = await supabase
     .from("skins")
     .select("id, title, description, price_cents, storage_path, preview_image_path, creator_id, profiles(username)")
     .eq("status", "approved")
+    .eq("is_public", true)
     .order("created_at", { ascending: false });
 
   const items = await Promise.all(
@@ -35,6 +48,7 @@ export default async function MarketplacePage() {
   return (
     <main style={styles.main}>
       <h1 style={styles.heading}>Cooperative Exchange</h1>
+      {error && <p style={styles.error}>{error}</p>}
       <div style={styles.grid}>
         {items.map((skin) => (
           <div key={skin.id} style={styles.card}>
@@ -50,12 +64,18 @@ export default async function MarketplacePage() {
               by {(skin.profiles as unknown as { username: string } | null)?.username ?? "unknown"}
             </p>
             <p style={styles.price}>${(skin.price_cents / 100).toFixed(2)}</p>
-            <form action={createSkinCheckoutSession}>
-              <input type="hidden" name="skinId" value={skin.id} />
-              <button style={styles.button} type="submit">
-                Buy
+            {PURCHASES_LIVE ? (
+              <form action={createSkinCheckoutSession}>
+                <input type="hidden" name="skinId" value={skin.id} />
+                <button style={styles.button} type="submit">
+                  Buy (TEST)
+                </button>
+              </form>
+            ) : (
+              <button style={styles.buttonDisabled} type="button" disabled>
+                Coming soon
               </button>
-            </form>
+            )}
           </div>
         ))}
         {items.length === 0 && <p style={styles.desc}>No approved listings yet.</p>}
@@ -72,7 +92,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "system-ui, sans-serif",
     padding: "48px 24px",
   },
-  heading: { textAlign: "center", marginBottom: "32px" },
+  heading: { textAlign: "center", marginBottom: "8px" },
+  error: {
+    textAlign: "center",
+    color: "#e2786b",
+    fontSize: "0.9rem",
+    marginBottom: "24px",
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -113,6 +139,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     fontSize: "1rem",
     cursor: "pointer",
+    width: "100%",
+  },
+  buttonDisabled: {
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "1px solid #2a2f3a",
+    background: "#1c222c",
+    color: "#6d7482",
+    fontSize: "1rem",
+    cursor: "not-allowed",
     width: "100%",
   },
 };
