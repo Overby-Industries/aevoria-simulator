@@ -25,6 +25,13 @@ export const DEFAULT_RECIPE: SkinRecipe = {
 export const MIN_FREQUENCY = 0.02;
 export const MAX_FREQUENCY = 0.3;
 
+// Shared between creator/create/actions.ts (server-side validation) and
+// creator/create/page.tsx + SkinVisibilityAndSubmit (the price input's
+// min/max) -- actions.ts is a "use server" file, which can only export
+// async functions, so these live here instead of there.
+export const MIN_PRICE_CENTS = 50; // $0.50
+export const MAX_PRICE_CENTS = 50000; // $500.00 — sanity ceiling, not a business rule
+
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 // Used both client-side (before enabling the Save button) and server-side

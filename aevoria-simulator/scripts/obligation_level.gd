@@ -11,6 +11,8 @@ extends Node
 ## counter across steps instead of driving events one submit at a time,
 ## which is how every other level here works.
 
+const LevelChrome = preload("res://scripts/level_chrome.gd")
+
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud
 
@@ -30,6 +32,7 @@ var _finish_button: Button
 var _back_button: Button
 
 func _ready():
+	add_child(LevelChrome.new())
 	hud.set_monitor(monitor)
 	monitor.obligation_lapsed.connect(_on_obligation_lapsed)
 	_build_steps()

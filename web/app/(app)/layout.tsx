@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/auth/actions";
+import { isAdmin } from "@/lib/admin";
 
 export default async function AppLayout({
   children,
@@ -11,6 +12,22 @@ export default async function AppLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Creator/Admin links only ever render for the exact user they apply to
+  // -- is_creator is read fresh per request (not cached client state), and
+  // isAdmin() is the same allowlist requireAdmin() enforces server-side on
+  // /admin/review itself, so a link never appears for someone who'd just
+  // get redirected away anyway.
+  let showCreatorLink = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_creator")
+      .eq("id", user.id)
+      .single();
+    showCreatorLink = !!profile?.is_creator;
+  }
+  const showAdminLink = await isAdmin(user?.email);
 
   return (
     <div style={{ minHeight: "100vh", background: "#0b0d10" }}>
@@ -30,6 +47,16 @@ export default async function AppLayout({
           </Link>
           {user ? (
             <>
+              {showCreatorLink && (
+                <Link href="/creator/create" style={styles.navLink}>
+                  Creator
+                </Link>
+              )}
+              {showAdminLink && (
+                <Link href="/admin/review" style={styles.navLink}>
+                  Admin
+                </Link>
+              )}
               <Link href="/account" style={styles.navLink}>
                 Account
               </Link>

@@ -11,6 +11,7 @@ extends Node3D
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 const H2O_COST: float = 10.0
 const FOOD_YIELD: float = 6.0
@@ -23,6 +24,7 @@ var _bay_buttons: Array = []
 var _harvested_this_session: float = 0.0
 
 func _ready():
+	add_child(LevelChrome.new())
 	for i in range(BAY_COUNT):
 		_spawn_bay_rack(i)
 	_spawn_desk()

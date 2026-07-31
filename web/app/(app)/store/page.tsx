@@ -2,13 +2,27 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createCheckoutSession } from "./actions";
 
+// Real purchasing stays disabled on Production until the catalog is
+// finalized and a refund flow exists. VERCEL_ENV is "production" only on
+// the Production deployment (main branch); it's "preview" on the dev
+// branch's deployment and unset in local `npm run dev`, so both of those
+// still get a working test button -- same Stripe test/live key split as
+// everywhere else in this app, so a test-branch click never touches real
+// money regardless of this flag.
+const PURCHASES_LIVE = process.env.VERCEL_ENV !== "production";
+
 // Without this, Next.js has no reason to treat this page as dynamic (no
 // cookies/auth touched here) and will prerender it once at build time —
 // freezing the product list until the next deploy, even if prices or
 // availability change in Stripe.
 export const dynamic = "force-dynamic";
 
-export default async function StorePage() {
+export default async function StorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   const prices = await getStripe().prices.list({
     active: true,
     expand: ["data.product"],
@@ -43,6 +57,7 @@ export default async function StorePage() {
   return (
     <main style={styles.main}>
       <h1 style={styles.heading}>Heritage Fleet Store</h1>
+      {error && <p style={styles.error}>{error}</p>}
       <div style={styles.grid}>
         {items.map((item) => (
           <div key={item.priceId} style={styles.card}>
@@ -57,12 +72,18 @@ export default async function StorePage() {
                 ? `$${(item.amount / 100).toFixed(2)} ${item.currency.toUpperCase()}`
                 : "—"}
             </p>
-            <form action={createCheckoutSession}>
-              <input type="hidden" name="priceId" value={item.priceId} />
-              <button style={styles.button} type="submit">
-                Buy
+            {PURCHASES_LIVE ? (
+              <form action={createCheckoutSession}>
+                <input type="hidden" name="priceId" value={item.priceId} />
+                <button style={styles.button} type="submit">
+                  Buy (TEST)
+                </button>
+              </form>
+            ) : (
+              <button style={styles.buttonDisabled} type="button" disabled>
+                Coming soon
               </button>
-            </form>
+            )}
           </div>
         ))}
         {items.length === 0 && (
@@ -81,7 +102,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "system-ui, sans-serif",
     padding: "48px 24px",
   },
-  heading: { textAlign: "center", marginBottom: "32px" },
+  heading: { textAlign: "center", marginBottom: "8px" },
+  error: {
+    textAlign: "center",
+    color: "#e2786b",
+    fontSize: "0.9rem",
+    marginBottom: "24px",
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
@@ -90,6 +117,14 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
   },
   card: {
+    // CSS grid items stretch to the tallest item in their row by default,
+    // but that only sets the *card's* height -- without height: "100%"
+    // here the card's own content still only takes up as much room as it
+    // needs, so a short-description card's Buy button sat higher than a
+    // long-description card's. height: 100% + flex column + the button's
+    // marginTop: "auto" below is what actually pins Buy to the bottom of
+    // every card regardless of description length.
+    height: "100%",
     background: "#14181f",
     border: "1px solid #2a2f3a",
     borderRadius: "12px",
@@ -101,7 +136,14 @@ const styles: Record<string, React.CSSProperties> = {
   image: { width: "100%", borderRadius: "8px", objectFit: "cover" },
   itemName: { margin: 0, fontSize: "1.1rem" },
   desc: { fontSize: "0.85rem", color: "#9aa2b0", margin: 0 },
-  price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0" },
+  // marginTop: "auto" here (not on the form below) pushes the price AND
+  // everything after it -- the Buy button -- down together as one block,
+  // so price+button land flush at the bottom of every card at the same
+  // height regardless of how tall the description above them is. Putting
+  // the auto margin on the form instead would leave the price sitting
+  // wherever the description happened to end, still misaligned across
+  // cards of different description length.
+  price: { fontSize: "1.2rem", fontWeight: 700, margin: "4px 0", marginTop: "auto" },
   button: {
     padding: "10px 12px",
     borderRadius: "6px",
@@ -110,6 +152,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     fontSize: "1rem",
     cursor: "pointer",
+    width: "100%",
+  },
+  buttonDisabled: {
+    padding: "10px 12px",
+    borderRadius: "6px",
+    border: "1px solid #2a2f3a",
+    background: "#1c222c",
+    color: "#6d7482",
+    fontSize: "1rem",
+    cursor: "not-allowed",
     width: "100%",
   },
 };

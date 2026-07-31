@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/the_long_drift.gd" id="1_drift"]
+[ext_resource type="PackedScene" path="res://scenes/CurHud.tscn" id="2_curhud"]
+
+[node name="TheLongDrift" type="Node"]
+script = ExtResource("1_drift")
+
+[node name="CURComplianceMonitor" type="CURComplianceMonitor" parent="."]
+
+[node name="CurHud" parent="." instance=ExtResource("2_curhud")]

@@ -6,10 +6,14 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/lib/supabase/server";
 
+function errorRedirect(message: string): never {
+  redirect("/store?error=" + encodeURIComponent(message));
+}
+
 export async function createCheckoutSession(formData: FormData) {
   const priceId = formData.get("priceId") as string;
   if (!priceId) {
-    throw new Error("Missing priceId");
+    errorRedirect("Missing item.");
   }
 
   // Require a real account so the purchase can be tied to it. Never trust
@@ -29,11 +33,14 @@ export async function createCheckoutSession(formData: FormData) {
   // actually belongs to the first-party store catalog (tier: "store" on
   // the product) — otherwise any active price in the account, including a
   // Tier 2 creator's approved skin, could be bought here with no revenue
-  // split and no record of the sale reaching the creator.
+  // split and no record of the sale reaching the creator. These checks
+  // used to throw a bare Error, which hits Next.js's generic error
+  // boundary with no detail on a deployed build -- same failure mode
+  // fixed for Stripe Connect onboarding and marketplace checkout.
   const price = await getStripe().prices.retrieve(priceId, { expand: ["product"] });
   const product = price.product as Stripe.Product;
   if (!price.active || product.deleted || product.metadata?.tier !== "store") {
-    throw new Error("This item isn't available in the store.");
+    errorRedirect("This item isn't available in the store.");
   }
 
   const origin = (await headers()).get("origin");
@@ -54,7 +61,7 @@ export async function createCheckoutSession(formData: FormData) {
   });
 
   if (!session.url) {
-    throw new Error("Stripe did not return a checkout URL.");
+    errorRedirect("Stripe did not return a checkout URL.");
   }
 
   redirect(session.url);

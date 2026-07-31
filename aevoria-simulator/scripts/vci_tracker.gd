@@ -159,3 +159,34 @@ static func compute(state: Dictionary) -> Dictionary:
 			"Accessibility": accessibility,
 		},
 	}
+
+## The two raw feedstocks everything else in the resource chain is made
+## from: H2O feeds both Greenhouse Bay (-> Food) and Electrolysis Bay
+## (-> Potable Water + O2), and PGM feeds Refinery Bay (-> Gold/Platinum/
+## Steel). Every other banked resource is downstream of one of these two,
+## so a shortage here is the earliest warning something further down the
+## chain is about to run dry -- distinct from VCI's own categories above,
+## which score the downstream products themselves. Targets are the same
+## kind of judgment-call floor as BUILT_TARGETS: PGM's matches TARGETS'
+## own entry for consistency, H2O's is picked a little higher since two
+## separate production chains draw on it instead of one.
+const CRITICAL_SUPPLY_TARGETS = {
+	"H2O": 40.0,
+	"PGM": 30.0,
+}
+
+## Ordered (not a Dictionary) so callers display H2O before PGM every
+## time -- H2O feeds two downstream chains to PGM's one, so it's the
+## more critical of the two.
+static func critical_supply_health(resources: Dictionary) -> Array:
+	var result: Array = []
+	for key in ["H2O", "PGM"]:
+		var banked = float(resources.get(key, 0.0))
+		var target = float(CRITICAL_SUPPLY_TARGETS[key])
+		result.append({
+			"resource": key,
+			"banked": banked,
+			"target": target,
+			"pct": clamp(banked / target * 100.0, 0.0, 100.0),
+		})
+	return result

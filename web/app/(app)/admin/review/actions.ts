@@ -5,15 +5,15 @@ import { getStripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin";
 
-export async function approveSkin(formData: FormData) {
-  await requireAdmin();
-  const skinId = formData.get("skinId") as string;
-
-  // Admin actions use the service-role client deliberately: RLS on `skins`
-  // only lets the *creator* update their own listing, and approval is
-  // exactly the case where someone other than the creator needs to write
-  // to it. The requireAdmin() check above is what keeps this safe, not
-  // the database policy.
+// Shared by both human approval here (admin/review) and system auto-approval
+// (creator/create/actions.ts) -- no requireAdmin() call of its own, since
+// the caller is responsible for deciding whether this is authorized (a
+// human admin click, or the system approving a procedural skin whose
+// content-safety is structurally guaranteed by the shader, not reviewed).
+// Always runs through the service-role admin client: RLS on `skins` only
+// lets the *creator* write their own row, and this is exactly the case
+// where something other than the creator needs to.
+export async function approveSkinRecord(skinId: string): Promise<void> {
   const admin = createAdminClient();
   const { data: skin, error } = await admin
     .from("skins")
@@ -23,6 +23,14 @@ export async function approveSkin(formData: FormData) {
 
   if (error || !skin) {
     throw new Error("Skin not found");
+  }
+
+  // Personal-use (is_public = false) skins never get sold, so there's
+  // nothing for Stripe to price -- approve the row without ever creating
+  // a product/price for it.
+  if (!skin.is_public) {
+    await admin.from("skins").update({ status: "approved" }).eq("id", skinId);
+    return;
   }
 
   const product = await getStripe().products.create({
@@ -45,7 +53,12 @@ export async function approveSkin(formData: FormData) {
       stripe_price_id: price.id,
     })
     .eq("id", skinId);
+}
 
+export async function approveSkin(formData: FormData) {
+  await requireAdmin();
+  const skinId = formData.get("skinId") as string;
+  await approveSkinRecord(skinId);
   revalidatePath("/admin/review");
   revalidatePath("/marketplace");
 }

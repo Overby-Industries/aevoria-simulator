@@ -36,6 +36,8 @@ signal login_failed(message: String)
 signal logged_out
 signal skins_fetched(skins: Array)
 signal skins_fetch_failed(message: String)
+signal my_creations_fetched(skins: Array)
+signal my_creations_fetch_failed(message: String)
 
 var access_token: String = ""
 var refresh_token: String = ""
@@ -44,7 +46,6 @@ var user_email: String = ""
 
 var _login_request: HTTPRequest
 var _refresh_request: HTTPRequest
-var _skins_request: HTTPRequest
 
 func _ready():
 	_resolve_backend()
@@ -56,10 +57,6 @@ func _ready():
 	_refresh_request = HTTPRequest.new()
 	add_child(_refresh_request)
 	_refresh_request.request_completed.connect(_on_refresh_response)
-
-	_skins_request = HTTPRequest.new()
-	add_child(_skins_request)
-	_skins_request.request_completed.connect(_on_skins_response)
 
 	_load_session()
 
@@ -182,6 +179,16 @@ func _clear_session_file():
 
 # --- entitlements ------------------------------------------------------------
 
+## A fresh HTTPRequest per call, not a shared instance-level node -- this
+## used to reuse one _skins_request node for every caller, and since
+## level_chrome.gd's AccountPanel and a level's own script (e.g.
+## assembly_bay.gd) both call this independently around the same time on
+## any level that uses LevelChrome, the second call would hit the first
+## still in flight and HTTPRequest.request() returns ERR_BUSY (44) --
+## exactly the "Could not start skins request (error 44)" players saw.
+## Each call getting its own throwaway node (freed on completion, same
+## pattern account_panel.gd's thumbnail loader already uses) makes
+## concurrent callers safe regardless of how many there are.
 func fetch_owned_skins():
 	if not is_logged_in():
 		skins_fetch_failed.emit("Not logged in.")
@@ -194,11 +201,18 @@ func fetch_owned_skins():
 		"apikey: %s" % SUPABASE_ANON_KEY,
 		"Authorization: Bearer %s" % access_token,
 	]
-	var err = _skins_request.request(url, headers, HTTPClient.METHOD_GET)
+	var request = HTTPRequest.new()
+	add_child(request)
+	request.request_completed.connect(func(_result, response_code, _headers, body):
+		request.queue_free()
+		_on_skins_response(response_code, body)
+	)
+	var err = request.request(url, headers, HTTPClient.METHOD_GET)
 	if err != OK:
+		request.queue_free()
 		skins_fetch_failed.emit("Could not start skins request (error %d)." % err)
 
-func _on_skins_response(_result, response_code, _headers, body):
+func _on_skins_response(response_code: int, body: PackedByteArray):
 	var text = body.get_string_from_utf8()
 	var data = JSON.parse_string(text)
 	if response_code != 200 or not (data is Array):
@@ -207,3 +221,35 @@ func _on_skins_response(_result, response_code, _headers, body):
 		return
 	SystemLog.log("Loaded %d owned item(s)." % data.size())
 	skins_fetched.emit(data)
+
+## A creator shouldn't have to buy their own skin to use it -- this pulls
+## every skin *authored* by the caller directly from `skins`, independent of
+## the `purchases` table entirely, regardless of status (pending/approved)
+## or is_public (private skins are exactly what this exists for -- see
+## web/app/(app)/creator/create/actions.ts's "personal use only" option).
+## RLS on `skins` ("status = 'approved' or auth.uid() = creator_id") already
+## permits a user to read every one of their own rows, approved or not.
+func fetch_my_creations():
+	if not is_logged_in():
+		my_creations_fetch_failed.emit("Not logged in.")
+		return
+	var url = "%s/rest/v1/skins?creator_id=eq.%s&select=id,title,description,recipe,is_public,status" % [SUPABASE_URL, user_id]
+	var headers = [
+		"apikey: %s" % SUPABASE_ANON_KEY,
+		"Authorization: Bearer %s" % access_token,
+	]
+	var request = HTTPRequest.new()
+	add_child(request)
+	request.request_completed.connect(func(_result, response_code, _headers, body):
+		request.queue_free()
+		var text = body.get_string_from_utf8()
+		var data = JSON.parse_string(text)
+		if response_code != 200 or not (data is Array):
+			my_creations_fetch_failed.emit("Could not load your creations.")
+			return
+		my_creations_fetched.emit(data)
+	)
+	var err = request.request(url, headers, HTTPClient.METHOD_GET)
+	if err != OK:
+		request.queue_free()
+		my_creations_fetch_failed.emit("Could not start creations request (error %d)." % err)

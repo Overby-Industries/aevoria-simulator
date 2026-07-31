@@ -22,6 +22,7 @@ WindowControls="*res://scripts/window_controls.gd"
 ThemeBootstrap="*res://scripts/theme_bootstrap.gd"
 AevoriaAuth="*res://scripts/aevoria_auth.gd"
 LevelContext="*res://scripts/level_context.gd"
+PlayerProfile="*res://scripts/player_profile.gd"
 
 [display]
 

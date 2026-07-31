@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SkinCustomizerWrapper from "@/components/SkinCustomizerWrapper";
+import SkinVisibilityAndSubmit from "@/components/SkinVisibilityAndSubmit";
 import { createProceduralSkin } from "./actions";
+import { MIN_PRICE_CENTS, MAX_PRICE_CENTS } from "@/lib/skin-recipe";
 
 export default async function CreatorCreatePage({
   searchParams,
@@ -34,13 +35,17 @@ export default async function CreatorCreatePage({
       <form action={createProceduralSkin} style={styles.card}>
         <h1 style={styles.heading}>Create a procedural skin</h1>
         <p style={styles.text}>
-          Design a pattern with the live preview below, then submit for review. Have a
-          finished file instead? <Link href="/creator/upload" style={styles.link}>Upload it here</Link>.
+          Design a pattern with the live preview below. Every skin here is generated
+          from color/pattern controls, not an uploaded image or file -- that's a
+          deliberate content-safety choice, not a missing feature. Public submissions
+          go live on the Marketplace right away (no waiting on manual review); private
+          ones are just for you.
         </p>
         {params.error && <p style={styles.error}>{params.error}</p>}
         {params.submitted && (
           <p style={styles.success}>
-            Submitted! We'll review it and let you know once it's approved.
+            Saved! Public skins are already live on the Marketplace; private ones are
+            ready to use in the simulator now.
           </p>
         )}
 
@@ -56,22 +61,7 @@ export default async function CreatorCreatePage({
           <textarea style={styles.textarea} name="description" rows={3} />
         </label>
 
-        <label style={styles.label}>
-          Price (USD)
-          <input
-            style={styles.input}
-            name="price"
-            type="number"
-            step="0.01"
-            min="0.50"
-            max="500"
-            required
-          />
-        </label>
-
-        <button style={styles.button} type="submit">
-          Submit for review
-        </button>
+        <SkinVisibilityAndSubmit minPrice={MIN_PRICE_CENTS} maxPrice={MAX_PRICE_CENTS} />
       </form>
     </main>
   );

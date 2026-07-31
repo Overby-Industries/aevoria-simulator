@@ -1,6 +1,7 @@
 extends Node3D
 
-## Water split, first slice: raw H2O (mined as comets in AsteroidField)
+## Water split, first slice: raw H2O (mined as comets at the deep-space
+## situation table, situation_table.gd)
 ## can now be split into Potable Water and O2 -- the life-support side
 ## of the resource loop, alongside Greenhouse Bay's direct H2O -> Food
 ## use. Three identical electrolysis tanks (unlike Refinery's three
@@ -11,6 +12,7 @@ extends Node3D
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const LevelChrome = preload("res://scripts/level_chrome.gd")
 
 const H2O_COST: float = 10.0
 const POTABLE_WATER_YIELD: float = 6.0
@@ -25,6 +27,7 @@ var _potable_water_this_session: float = 0.0
 var _o2_this_session: float = 0.0
 
 func _ready():
+	add_child(LevelChrome.new())
 	for i in range(TANK_COUNT):
 		_spawn_tank(i)
 	_build_ui()

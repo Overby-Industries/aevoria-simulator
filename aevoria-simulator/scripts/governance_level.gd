@@ -13,6 +13,8 @@ extends Node
 ## would call a community_governance.gd autoload instead of
 ## monitor.submit_operational() directly.
 
+const LevelChrome = preload("res://scripts/level_chrome.gd")
+
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud
 
@@ -25,6 +27,7 @@ var _finish_button: Button
 var _back_button: Button
 
 func _ready():
+	add_child(LevelChrome.new())
 	hud.set_monitor(monitor)
 	_build_steps()
 	_build_tutorial_ui()
