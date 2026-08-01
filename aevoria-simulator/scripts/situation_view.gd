@@ -7,9 +7,11 @@ extends Node3D
 ## (solar_system_state.gd). Your own claimed sectors open onto the
 ## existing shared Hangar Deck (main_hangar_deck.gd); unclaimed sectors
 ## can be built out into a new station by spending a fixed resource
-## bundle. Also the one place a faction's whole population (summed
-## across every station it holds) gets balanced against banked Food/
-## Potable Water -- see the Civil Engineering section below.
+## bundle. Also the one place a faction's whole population (biological +
+## silicon-based, summed across every station it holds) gets balanced
+## against banked Food/Potable Water/Steel -- see the Civil Engineering
+## section below, and cycle_status_panel.gd for the always-visible HUD
+## version of the same numbers.
 ##
 ## Same table-camera technique as situation_table.gd (look_at() once,
 ## then only tween the camera's world position by a fixed offset), and
@@ -39,16 +41,24 @@ const EXPANSION_COST = {
 	"UHPC Concrete": 15.0, "Shield Plating": 10.0,
 }
 
-## Per-cycle upkeep, per resident -- deliberately not a real-time drain
-## (nothing else in this codebase ticks an economy per-frame; mining/
-## refining/growing are all explicit player-triggered actions), so
-## consumption only happens when "Run Supply Cycle" is pressed.
-const FOOD_PER_POP = 0.4
-const WATER_PER_POP = 0.4
+## Upkeep math itself (Food/Water per biological pop, Steel per silicon
+## pop) lives in SolarSystemState.upkeep_cost() -- shared with
+## cycle_status_panel.gd's global HUD readout so the two never disagree.
+## Consumption only happens when "Run Supply Cycle" is pressed --
+## deliberately not a real-time drain, matching every other resource
+## system in this codebase (mining/refining/growing are all explicit
+## player-triggered actions, nothing ticks an economy per-frame).
+const GROW_BIO_AMOUNT = 3
+const GROW_BIO_FOOD_COST = 10.0
+const GROW_BIO_WATER_COST = 10.0
 
-const GROW_AMOUNT = 5
-const GROW_FOOD_COST = 10.0
-const GROW_WATER_COST = 10.0
+const GROW_SILICON_AMOUNT = 5
+const GROW_SILICON_STEEL_COST = 15.0
+
+## Decorative-only "logistics happen here" flavor -- two haul-route lines
+## per claimed station out to nearby points in the belt, not a real
+## scheduling/simulation system.
+const HAUL_ROUTES_PER_STATION = 2
 
 const HANGAR_LEVEL_ID_BY_FACTION = {
 	LevelCatalog.AEVORIA_COMMONWEALTH: "main_hangar_deck",
@@ -79,7 +89,8 @@ var _expand_button: Button
 var _enter_button: Button
 var _civil_label: Label
 var _run_cycle_button: Button
-var _grow_button: Button
+var _grow_bio_button: Button
+var _grow_silicon_button: Button
 var _status_label: Label
 
 func _ready():
@@ -184,6 +195,41 @@ func _refresh_sectors() -> void:
 	_claims = SolarSystemState.get_claims()
 	for slot_id in _slots_by_id.keys():
 		_spawn_sector_marker(_slots_by_id[slot_id])
+	_build_haul_routes()
+
+## Decorative-only shuttle haul routes: a thin line from each claimed
+## station out to a couple of random points in the belt ring. One
+## PRIMITIVE_LINES mesh for every route at once (built from absolute
+## world-space vertex pairs -- _table_root sits at the scene origin with
+## no transform of its own, so no per-segment orientation math is
+## needed the way a stretched mesh would require).
+func _build_haul_routes() -> void:
+	if _claims.is_empty():
+		return
+	var surface_tool = SurfaceTool.new()
+	surface_tool.begin(Mesh.PRIMITIVE_LINES)
+	surface_tool.set_color(Color(0.55, 0.78, 0.95, 0.4))
+	var rng = RandomNumberGenerator.new()
+	for slot_id in _claims.keys():
+		var slot = _slots_by_id.get(slot_id)
+		if slot == null:
+			continue
+		var station_pos = _slot_position(slot) + Vector3(0, 0.05, 0)
+		for i in range(HAUL_ROUTES_PER_STATION):
+			var angle = deg_to_rad(float(slot["angle_deg"])) + rng.randf_range(-0.5, 0.5)
+			var radius = rng.randf_range(BELT_RADIUS_RANGE.x, BELT_RADIUS_RANGE.y)
+			var belt_point = Vector3(cos(angle) * radius, 0.02, sin(angle) * radius)
+			surface_tool.add_vertex(station_pos)
+			surface_tool.add_vertex(belt_point)
+
+	var instance = MeshInstance3D.new()
+	instance.mesh = surface_tool.commit()
+	var mat = StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.vertex_color_use_as_albedo = true
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	instance.material_override = mat
+	_table_root.add_child(instance)
 
 func _spawn_sector_marker(slot: Dictionary) -> void:
 	var slot_id: String = slot["id"]
@@ -234,7 +280,7 @@ func _spawn_sector_marker(slot: Dictionary) -> void:
 	_table_root.add_child(station)
 
 	var label = Label3D.new()
-	label.text = "%s\n%s -- pop %d" % [claim["station_name"], LevelCatalog.faction_label(faction_id), int(claim["population"])]
+	label.text = "%s\n%s -- bio %d / silicon %d" % [claim["station_name"], LevelCatalog.faction_label(faction_id), int(claim["population_biological"]), int(claim["population_silicon"])]
 	label.font_size = 26
 	label.pixel_size = 0.01
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -327,11 +373,17 @@ func _build_ui() -> void:
 	_run_cycle_button.pressed.connect(_on_run_cycle_pressed)
 	outer.add_child(_run_cycle_button)
 
-	_grow_button = Button.new()
-	_grow_button.text = "Grow Population (+%d) at selected station" % GROW_AMOUNT
-	_grow_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_grow_button.pressed.connect(_on_grow_pressed)
-	outer.add_child(_grow_button)
+	_grow_bio_button = Button.new()
+	_grow_bio_button.text = "Grow Biological Pop (+%d) at selected station" % GROW_BIO_AMOUNT
+	_grow_bio_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_grow_bio_button.pressed.connect(_on_grow_bio_pressed)
+	outer.add_child(_grow_bio_button)
+
+	_grow_silicon_button = Button.new()
+	_grow_silicon_button.text = "Grow Silicon-Based Pop (+%d) at selected station" % GROW_SILICON_AMOUNT
+	_grow_silicon_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_grow_silicon_button.pressed.connect(_on_grow_silicon_pressed)
+	outer.add_child(_grow_silicon_button)
 
 	_status_label = Label.new()
 	_status_label.add_theme_font_size_override("font_size", 11)
@@ -364,6 +416,10 @@ func _refresh_ui() -> void:
 	_refresh_list()
 	_refresh_detail_panel()
 	_refresh_civil_panel()
+	# The top-center cycle readout (cycle_status_panel.gd) is built by
+	# LevelChrome, which never hands this scene the instance back --
+	# broadcast to its group instead of holding a direct reference.
+	get_tree().call_group("cycle_status_panel", "refresh")
 
 func _refresh_list() -> void:
 	_sector_list.clear()
@@ -375,7 +431,7 @@ func _refresh_list() -> void:
 		if claim == null:
 			_sector_list.add_item("%s -- Unclaimed" % slot_id)
 		else:
-			_sector_list.add_item("%s -- %s (%s, pop %d)" % [slot_id, claim["station_name"], LevelCatalog.faction_label(claim["faction_id"]), int(claim["population"])])
+			_sector_list.add_item("%s -- %s (%s, bio %d / silicon %d)" % [slot_id, claim["station_name"], LevelCatalog.faction_label(claim["faction_id"]), int(claim["population_biological"]), int(claim["population_silicon"])])
 		_list_index_to_id.append(slot_id)
 
 func _on_list_item_selected(index: int) -> void:
@@ -427,34 +483,36 @@ func _refresh_detail_panel() -> void:
 		_expand_button.disabled = not affordable
 		_expand_button.visible = true
 	else:
-		_detail_label.text = "%s -- %s\nOwned by %s, population %d." % [_selected_sector_id, claim["station_name"], LevelCatalog.faction_label(claim["faction_id"]), int(claim["population"])]
+		_detail_label.text = "%s -- %s\nOwned by %s. Biological pop %d, Silicon-Based pop %d." % [_selected_sector_id, claim["station_name"], LevelCatalog.faction_label(claim["faction_id"]), int(claim["population_biological"]), int(claim["population_silicon"])]
 		if claim["faction_id"] == faction_id:
 			_enter_button.visible = true
 
 func _refresh_civil_panel() -> void:
 	var faction_id = _current_faction()
-	var total_population = SolarSystemState.total_population(faction_id)
-	var food_needed = float(total_population) * FOOD_PER_POP
-	var water_needed = float(total_population) * WATER_PER_POP
+	var totals = SolarSystemState.total_population(faction_id)
+	var cost = SolarSystemState.upkeep_cost(faction_id)
 	var state = FactionHomeBase.load_state(faction_id)
-	var food_have = float(state["resources"].get("Food", 0.0))
-	var water_have = float(state["resources"].get("Potable Water", 0.0))
-	var short = food_have < food_needed or water_have < water_needed
+	var short = not _can_afford(state["resources"], cost)
 
 	var lines = [
-		"Total population: %d" % total_population,
-		"Per-cycle upkeep: %.1f Food, %.1f Potable Water" % [food_needed, water_needed],
-		"Banked: %.1f Food, %.1f Potable Water" % [food_have, water_have],
+		"Population: %d biological, %d silicon-based (%d total)" % [totals["biological"], totals["silicon"], totals["total"]],
+		"Per-cycle upkeep: %.1f Food, %.1f Potable Water, %.1f Steel" % [cost["Food"], cost["Potable Water"], cost["Steel"]],
+		"Banked: %.1f Food, %.1f Potable Water, %.1f Steel" % [
+			float(state["resources"].get("Food", 0.0)),
+			float(state["resources"].get("Potable Water", 0.0)),
+			float(state["resources"].get("Steel", 0.0)),
+		],
 	]
 	if short:
-		lines.append("WARNING: not enough banked to run a supply cycle -- grow greenhouse/electrolysis production before adding more population.")
+		lines.append("WARNING: population is at risk of starving -- not enough banked to run a supply cycle. Grow greenhouse/electrolysis/refinery production before adding more population.")
 	_civil_label.text = "\n".join(lines)
 	_civil_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.5) if short else Color(0.75, 0.85, 0.95))
 	_run_cycle_button.disabled = short
 
 	var selected_claim = _claims.get(_selected_sector_id)
-	var can_grow = selected_claim != null and selected_claim["faction_id"] == faction_id and _can_afford(state["resources"], {"Food": GROW_FOOD_COST, "Potable Water": GROW_WATER_COST})
-	_grow_button.disabled = not can_grow
+	var owns_selected = selected_claim != null and selected_claim["faction_id"] == faction_id
+	_grow_bio_button.disabled = not (owns_selected and _can_afford(state["resources"], {"Food": GROW_BIO_FOOD_COST, "Potable Water": GROW_BIO_WATER_COST}))
+	_grow_silicon_button.disabled = not (owns_selected and _can_afford(state["resources"], {"Steel": GROW_SILICON_STEEL_COST}))
 
 func _on_expand_pressed() -> void:
 	if _selected_sector_id == "" or _claims.has(_selected_sector_id):
@@ -476,31 +534,48 @@ func _on_expand_pressed() -> void:
 
 func _on_run_cycle_pressed() -> void:
 	var faction_id = _current_faction()
-	var total_population = SolarSystemState.total_population(faction_id)
-	var food_needed = float(total_population) * FOOD_PER_POP
-	var water_needed = float(total_population) * WATER_PER_POP
+	var cost = SolarSystemState.upkeep_cost(faction_id)
 	var state = FactionHomeBase.load_state(faction_id)
-	if not _can_afford(state["resources"], {"Food": food_needed, "Potable Water": water_needed}):
+	if not _can_afford(state["resources"], cost):
 		return
-	FactionHomeBase.spend_resource(faction_id, "Food", food_needed)
-	FactionHomeBase.spend_resource(faction_id, "Potable Water", water_needed)
-	SystemLog.log("[Situation View] %s ran a supply cycle: -%.1f Food, -%.1f Potable Water." % [LevelCatalog.faction_label(faction_id), food_needed, water_needed])
-	_status_label.text = "Supply cycle complete."
+	for resource_name in cost.keys():
+		if cost[resource_name] > 0.0:
+			FactionHomeBase.spend_resource(faction_id, resource_name, cost[resource_name])
+	var cycle = SolarSystemState.advance_cycle()
+	SystemLog.log("[Situation View] %s ran supply cycle %d: -%.1f Food, -%.1f Potable Water, -%.1f Steel." % [LevelCatalog.faction_label(faction_id), cycle, cost["Food"], cost["Potable Water"], cost["Steel"]])
+	_status_label.text = "Supply cycle %d complete." % cycle
 	_refresh_ui()
 
-func _on_grow_pressed() -> void:
+func _on_grow_bio_pressed() -> void:
 	var faction_id = _current_faction()
 	var claim = _claims.get(_selected_sector_id)
 	if claim == null or claim["faction_id"] != faction_id:
 		return
 	var state = FactionHomeBase.load_state(faction_id)
-	if not _can_afford(state["resources"], {"Food": GROW_FOOD_COST, "Potable Water": GROW_WATER_COST}):
+	var cost = {"Food": GROW_BIO_FOOD_COST, "Potable Water": GROW_BIO_WATER_COST}
+	if not _can_afford(state["resources"], cost):
 		return
-	FactionHomeBase.spend_resource(faction_id, "Food", GROW_FOOD_COST)
-	FactionHomeBase.spend_resource(faction_id, "Potable Water", GROW_WATER_COST)
-	SolarSystemState.grow_population(_selected_sector_id, GROW_AMOUNT)
-	SystemLog.log("[Situation View] %s grew %s by %d." % [LevelCatalog.faction_label(faction_id), _selected_sector_id, GROW_AMOUNT])
-	_status_label.text = "Population grew at %s." % _selected_sector_id
+	FactionHomeBase.spend_resource(faction_id, "Food", GROW_BIO_FOOD_COST)
+	FactionHomeBase.spend_resource(faction_id, "Potable Water", GROW_BIO_WATER_COST)
+	SolarSystemState.grow_population(_selected_sector_id, "biological", GROW_BIO_AMOUNT)
+	SystemLog.log("[Situation View] %s grew biological population at %s by %d." % [LevelCatalog.faction_label(faction_id), _selected_sector_id, GROW_BIO_AMOUNT])
+	_status_label.text = "Biological population grew at %s." % _selected_sector_id
+
+	_refresh_sectors()
+	_refresh_ui()
+
+func _on_grow_silicon_pressed() -> void:
+	var faction_id = _current_faction()
+	var claim = _claims.get(_selected_sector_id)
+	if claim == null or claim["faction_id"] != faction_id:
+		return
+	var state = FactionHomeBase.load_state(faction_id)
+	if not _can_afford(state["resources"], {"Steel": GROW_SILICON_STEEL_COST}):
+		return
+	FactionHomeBase.spend_resource(faction_id, "Steel", GROW_SILICON_STEEL_COST)
+	SolarSystemState.grow_population(_selected_sector_id, "silicon", GROW_SILICON_AMOUNT)
+	SystemLog.log("[Situation View] %s grew silicon-based population at %s by %d." % [LevelCatalog.faction_label(faction_id), _selected_sector_id, GROW_SILICON_AMOUNT])
+	_status_label.text = "Silicon-based population grew at %s." % _selected_sector_id
 
 	_refresh_sectors()
 	_refresh_ui()

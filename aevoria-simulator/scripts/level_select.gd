@@ -16,6 +16,7 @@ const FoundersMonument = preload("res://scripts/founders_monument.gd")
 const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCICommonsPanel = preload("res://scripts/vci_commons_panel.gd")
+const CycleStatusPanel = preload("res://scripts/cycle_status_panel.gd")
 
 const FACTION_IDS = [
 	LevelCatalog.AEVORIA_COMMONWEALTH,
@@ -100,6 +101,7 @@ func _build_ui() -> void:
 	outer.add_child(monument_button)
 
 	add_child(VCICommonsPanel.new(_faction_id))
+	add_child(CycleStatusPanel.new(_faction_id))
 
 ## A standalone panel, separate from the level-roster card list, docked
 ## near the bottom-center of the screen -- roughly below where

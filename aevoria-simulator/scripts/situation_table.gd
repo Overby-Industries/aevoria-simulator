@@ -33,6 +33,7 @@ const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
 const FactionVisuals = preload("res://scripts/faction_visuals.gd")
 const SpaceEnvironment = preload("res://scripts/space_environment.gd")
+const Starfield = preload("res://scripts/starfield.gd")
 
 const WIDE_OFFSET = Vector3(0, 20, 9)
 const ZOOM_OFFSET = Vector3(0, 5, 2.2)
@@ -64,6 +65,7 @@ var _zoom_out_button: Button
 func _ready():
 	add_child(LevelChrome.new())
 	add_child(SpaceEnvironment.build())
+	Starfield.spawn(self)
 	_nodes = ResourceNodeCatalog.build_field(6, 4, 3, 3)
 	for node_data in _nodes:
 		_spawn_node(node_data)
