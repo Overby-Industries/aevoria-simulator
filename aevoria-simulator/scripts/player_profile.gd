@@ -38,14 +38,15 @@ func update_from_purchases(purchases: Array) -> void:
 	if is_paid != was_paid or is_founder != was_founder:
 		badges_updated.emit()
 
-## " ★ FOUNDER" / " ✦ PATRON" / "" -- ready to append straight onto a ship
-## name or account email label. Founder implies paid (the bundle is a
-## purchase) so only the stronger badge shows, never both.
+## " ★ Founding Citizen" / " ✦ Founder Aevoria" / "" -- ready to append
+## straight onto a ship name or account email label. Founder implies paid
+## (the bundle is a purchase) so only the stronger badge shows, never
+## both.
 func badge_suffix() -> String:
 	if is_founder:
-		return " ★ FOUNDER"
+		return " ★ Founding Citizen"
 	if is_paid:
-		return " ✦ PATRON"
+		return " ✦ Founder Aevoria"
 	return ""
 
 func set_active_ship_name(ship_name: String) -> void:

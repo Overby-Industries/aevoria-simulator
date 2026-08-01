@@ -68,6 +68,7 @@ const ORBIT_ZOOM_STEP = 0.9
 # Ship naming + custom color picker UI
 var _ship_name_input: LineEdit
 var _badge_label: Label
+var _badge_detail_vbox: VBoxContainer
 var _base_color_button: ColorPickerButton
 var _dark_color_button: ColorPickerButton
 var _highlight_color_button: ColorPickerButton
@@ -296,6 +297,13 @@ func _build_ui():
 	_badge_label.add_theme_font_size_override("font_size", 11)
 	_badge_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.4))
 	outer.add_child(_badge_label)
+
+	# The fuller badge/perk breakdown (was account_panel.gd's "BADGES &
+	# PERKS" list -- moved here so all of a player's account-earned
+	# personalization lives in one place, alongside the skin picker it
+	# already shares a purchases fetch with).
+	_badge_detail_vbox = VBoxContainer.new()
+	outer.add_child(_badge_detail_vbox)
 
 	var hulls_header = Label.new()
 	hulls_header.text = "NEW SHIP -- HULLS AVAILABLE TO YOUR FACTION"
@@ -534,6 +542,43 @@ func _refresh_badge_ui() -> void:
 	_badge_label.text = suffix.strip_edges() if not suffix.is_empty() else ""
 	_badge_label.visible = not suffix.is_empty()
 
+## Fuller breakdown than _badge_label's short suffix -- ported from
+## account_panel.gd's old "BADGES & PERKS" list (see that file's history):
+## the Founder/Patron thank-you line plus any per-pack cosmetic perk
+## (decal/special effect) a Tier 1 store purchase unlocks.
+func _refresh_badge_detail_ui(purchases: Array) -> void:
+	for child in _badge_detail_vbox.get_children():
+		child.queue_free()
+
+	var lines: Array = []
+	if PlayerProfile.is_founder:
+		lines.append("★ Founding Citizen -- name etched on the Founders Monument")
+	elif PlayerProfile.is_paid:
+		lines.append("✦ Founder Aevoria -- thank you for supporting the Commonwealth")
+
+	for purchase in purchases:
+		var product_name = purchase.get("product_name")
+		if product_name == null:
+			continue
+		var reward = Tier1SkinCatalog.get_reward(product_name)
+		if reward.is_empty():
+			continue
+		if not reward.get("decal_path", "").is_empty():
+			lines.append("- %s: decal unlocked" % product_name)
+		if not reward.get("special_effect", "").is_empty():
+			lines.append("- %s: %s effect unlocked" % [product_name, reward["special_effect"].replace("_", " ")])
+
+	if lines.is_empty():
+		return
+
+	for line in lines:
+		var label = Label.new()
+		label.text = line
+		label.add_theme_font_size_override("font_size", 11)
+		label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.4))
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_badge_detail_vbox.add_child(label)
+
 # --- custom color wheel (free for every player) -----------------------------------
 
 func _make_color_picker_column(parent: HBoxContainer, label_text: String) -> ColorPickerButton:
@@ -606,7 +651,13 @@ func _on_my_creations_fetch_failed(message: String) -> void:
 	_my_creations_status_label.text = message
 
 func _on_skins_fetched(purchases: Array):
+	# update_from_purchases() already triggers _refresh_badge_ui() via the
+	# badges_updated signal (connected in _ready()) -- the detail
+	# breakdown below isn't state-gated the same way (it needs the full
+	# purchases array every time, not just on a change), so it's called
+	# directly here instead.
 	PlayerProfile.update_from_purchases(purchases)
+	_refresh_badge_detail_ui(purchases)
 	for child in _skins_vbox.get_children():
 		child.queue_free()
 

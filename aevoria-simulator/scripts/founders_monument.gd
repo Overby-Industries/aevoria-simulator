@@ -75,11 +75,16 @@ func _build_ui():
 	_panel = PanelContainer.new()
 	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(420, 0)
+	# Must be in the tree before set_anchors_and_offsets_preset() -- see
+	# vci_commons_panel.gd's matching fix/comment. Especially important
+	# for a CENTER preset like this one: computing the anchor against a
+	# stale/default parent size doesn't just nudge the panel, it can
+	# genuinely miscenter it.
+	add_child(_panel)
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.LayoutPresetMode.PRESET_MODE_MINSIZE)
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_panel.theme_type_variation = "GlassPanelFrame"
-	add_child(_panel)
 
 	var glass = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.75), 1.0)
 	_panel.add_child(glass)

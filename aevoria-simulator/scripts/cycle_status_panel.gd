@@ -41,8 +41,20 @@ func _ready() -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "GlassPanelFrame"
-	panel.custom_minimum_size = Vector2(360, 0)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	panel.custom_minimum_size = Vector2(380, 0)
+	# set_anchors_and_offsets_preset()'s MINSIZE-mode margin computes
+	# offsets against the control's parent-area size at call time -- since
+	# this panel isn't in the tree yet here, that computation used a stale/
+	# default size instead of the real viewport width, landing the anchor
+	# at the box's left edge rather than centering it (confirmed via
+	# screenshot: box visibly offset right by ~half its own width). The
+	# lobby's "Solar System Table" button (level_select.gd) never had this
+	# bug because it uses the same manual preset+position technique this
+	# now matches: set_anchors_preset() alone (no offset computation) plus
+	# a hand-computed position = -half_width, so centering never depends on
+	# the parent size being known at call time.
+	panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	panel.position = Vector2(-190, 20)
 	add_child(panel)
 
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)

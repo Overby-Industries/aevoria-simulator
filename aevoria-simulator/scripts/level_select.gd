@@ -118,6 +118,7 @@ func _build_situation_view_button() -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "GlassPanelFrame"
+	panel.custom_minimum_size = Vector2(380, 0)
 	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	panel.position = Vector2(-190, -160)
 	canvas.add_child(panel)

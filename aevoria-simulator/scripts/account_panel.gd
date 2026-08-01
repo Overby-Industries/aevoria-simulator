@@ -1,13 +1,21 @@
 extends CanvasLayer
 
 ## Logs the player into the same Commonwealth account they use on the web
-## marketplace (via the AevoriaAuth autoload) and shows what they own --
-## closing the loop between buying a skin on the web and actually having
-## it here. Built in code, matching cur_fsm_display.gd's pattern. Docked to
-## the bottom-right of the screen; the game's Exit button lives here too.
+## marketplace (via the AevoriaAuth autoload). Built in code, matching
+## cur_fsm_display.gd's pattern. Docked to the bottom-right of the screen;
+## the game's Exit button lives here too.
+##
+## Skins/Badges inventory used to be shown here, but it duplicated
+## assembly_bay.gd's own "SKIN"/"MY CREATIONS" skin picker and badge
+## label -- moved there entirely (see assembly_bay.gd's _badge_label/
+## _badge_detail_label) so this panel only shows identity (email + badge)
+## and the ship-name readout, not a second copy of the same inventory.
 
 const GlassPanel = preload("res://scripts/glass_panel.gd")
-const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
+
+## Gold, matching the badge color assembly_bay.gd's own _badge_label uses --
+## kept as one constant so the two panels can't drift apart.
+const BADGE_COLOR = Color(0.95, 0.82, 0.4)
 
 var _panel: PanelContainer
 var _logged_out_box: VBoxContainer
@@ -16,9 +24,8 @@ var _email_input: LineEdit
 var _password_input: LineEdit
 var _status_label: Label
 var _account_label: Label
+var _account_badge_label: Label
 var _ship_name_label: Label
-var _skins_vbox: VBoxContainer
-var _badges_vbox: VBoxContainer
 
 func _ready():
 	_build_ui()
@@ -37,6 +44,11 @@ func _build_ui():
 	_panel = PanelContainer.new()
 	_panel.theme = ThemeBootstrap.theme
 	_panel.custom_minimum_size = Vector2(280, 0)
+	# Must be in the tree before set_anchors_and_offsets_preset() is
+	# called -- it computes offsets against the real parent-area size,
+	# which isn't known correctly before add_child() (see
+	# vci_commons_panel.gd's matching fix/comment for the bug this avoids).
+	add_child(_panel)
 	# A real anchor (not a one-off position computed from today's window
 	# size) -- PRESET_MODE_MINSIZE keeps the panel pinned to the
 	# bottom-right corner, 20px in, and Godot recomputes that on every
@@ -49,7 +61,6 @@ func _build_ui():
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.theme_type_variation = "GlassPanelFrame"
-	add_child(_panel)
 
 	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
 	_panel.add_child(bg)
@@ -107,9 +118,20 @@ func _build_ui():
 	_logged_in_box = VBoxContainer.new()
 	outer.add_child(_logged_in_box)
 
+	var account_row = HBoxContainer.new()
+	_logged_in_box.add_child(account_row)
+
 	_account_label = Label.new()
 	_account_label.add_theme_font_size_override("font_size", 12)
-	_logged_in_box.add_child(_account_label)
+	account_row.add_child(_account_label)
+
+	# Separate Label (not baked into _account_label's own text) so the
+	# badge can be gold while "Logged in: <email>" stays the normal
+	# color -- a single Label can't mix font colors mid-string.
+	_account_badge_label = Label.new()
+	_account_badge_label.add_theme_font_size_override("font_size", 12)
+	_account_badge_label.add_theme_color_override("font_color", BADGE_COLOR)
+	account_row.add_child(_account_badge_label)
 
 	# Read-only here -- the ship's actual name is set in the Assembly Bay's
 	# Ship Name field (PlayerProfile.set_active_ship_name()); this just
@@ -121,46 +143,6 @@ func _build_ui():
 	_logged_in_box.add_child(_ship_name_label)
 
 	_logged_in_box.add_child(HSeparator.new())
-
-	var inventory_header = Label.new()
-	inventory_header.text = "INVENTORY"
-	inventory_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
-	_logged_in_box.add_child(inventory_header)
-
-	var skins_header_row = HBoxContainer.new()
-	_logged_in_box.add_child(skins_header_row)
-
-	var skins_header = Label.new()
-	skins_header.text = "SKINS"
-	skins_header.add_theme_font_size_override("font_size", 12)
-	skins_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	skins_header_row.add_child(skins_header)
-
-	var refresh_button = Button.new()
-	refresh_button.text = "Refresh"
-	refresh_button.theme_type_variation = "GlassButton"
-	refresh_button.add_theme_font_size_override("font_size", 10)
-	refresh_button.pressed.connect(func(): AevoriaAuth.fetch_owned_skins())
-	skins_header_row.add_child(refresh_button)
-
-	var skins_scroll = ScrollContainer.new()
-	skins_scroll.custom_minimum_size = Vector2(0, 100)
-	_logged_in_box.add_child(skins_scroll)
-	_skins_vbox = VBoxContainer.new()
-	_skins_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	skins_scroll.add_child(_skins_vbox)
-
-	var badges_header = Label.new()
-	badges_header.text = "BADGES & PERKS"
-	badges_header.add_theme_font_size_override("font_size", 12)
-	_logged_in_box.add_child(badges_header)
-
-	var badges_scroll = ScrollContainer.new()
-	badges_scroll.custom_minimum_size = Vector2(0, 60)
-	_logged_in_box.add_child(badges_scroll)
-	_badges_vbox = VBoxContainer.new()
-	_badges_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	badges_scroll.add_child(_badges_vbox)
 
 	var logout_button = Button.new()
 	logout_button.text = "Log Out"
@@ -184,17 +166,16 @@ func _refresh_state():
 	if logged_in:
 		_refresh_account_label()
 		_refresh_ship_name_label()
+		# Still fetched here (not just in assembly_bay.gd) so the badge
+		# next to the player's email is correct on every level, not only
+		# after a visit to the Assembly Bay.
 		AevoriaAuth.fetch_owned_skins()
-	else:
-		for child in _skins_vbox.get_children():
-			child.queue_free()
-		for child in _badges_vbox.get_children():
-			child.queue_free()
 
 func _refresh_account_label():
 	if not AevoriaAuth.is_logged_in():
 		return
-	_account_label.text = "Logged in: %s%s" % [AevoriaAuth.user_email, PlayerProfile.badge_suffix()]
+	_account_label.text = "Logged in: %s" % AevoriaAuth.user_email
+	_account_badge_label.text = PlayerProfile.badge_suffix()
 
 func _refresh_ship_name_label():
 	_ship_name_label.text = "Ship: %s" % PlayerProfile.active_ship_name
@@ -211,146 +192,13 @@ func _on_login_succeeded(_user_info: Dictionary):
 func _on_login_failed(message: String):
 	_status_label.text = message
 
+## Skins list and the fuller badge/perk breakdown both moved to
+## assembly_bay.gd (_on_skins_fetched there does the equivalent work) --
+## this handler now only has to keep PlayerProfile's badge state and this
+## panel's own label in sync.
 func _on_skins_fetched(purchases: Array):
 	PlayerProfile.update_from_purchases(purchases)
-	_refresh_badges_ui(purchases)
-	for child in _skins_vbox.get_children():
-		child.queue_free()
-	if purchases.is_empty():
-		var empty_label = Label.new()
-		empty_label.text = "(no purchases yet)"
-		empty_label.add_theme_font_size_override("font_size", 11)
-		empty_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
-		_skins_vbox.add_child(empty_label)
-		return
-	for purchase in purchases:
-		# A Tier 1 (first-party store) purchase has no skin_id, so the
-		# embedded "skins" join comes back as an explicit JSON null rather
-		# than a missing key -- .get()'s default only covers the latter.
-		var skin = purchase.get("skins", {})
-		if skin == null:
-			skin = {}
-
-		var row = HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		_skins_vbox.add_child(row)
-
-		var thumb = TextureRect.new()
-		thumb.custom_minimum_size = Vector2(20, 20)
-		thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		thumb.stretch_mode = TextureRect.STRETCH_SCALE
-		row.add_child(thumb)
-
-		var label = Label.new()
-		label.text = "- %s" % skin.get("title", "(store item)")
-		label.add_theme_font_size_override("font_size", 11)
-		row.add_child(label)
-
-		# Procedural skins have no storage_path (see 0005_skin_recipes.sql
-		# in web/supabase/migrations) -- preview_image_path is their only
-		# image. An uploaded file skin's own storage_path is used only if
-		# it's actually an image (could be a non-image 3D asset instead),
-		# matching the exact same fallback the web marketplace page uses.
-		var image_extensions = [".png", ".jpg", ".jpeg", ".webp"]
-		var storage_path = skin.get("storage_path")
-		var is_image = storage_path != null and image_extensions.any(
-			func(ext): return storage_path.to_lower().ends_with(ext)
-		)
-		var preview_path = storage_path if is_image else skin.get("preview_image_path")
-		if preview_path != null:
-			_load_skin_thumbnail(thumb, preview_path)
+	_refresh_account_label()
 
 func _on_skins_fetch_failed(message: String):
 	_status_label.text = message
-
-## Distinct from _on_skins_fetched's equip-picker list (that one only shows
-## Tier 2 marketplace/recipe skins and Tier1SkinCatalog-known store items) --
-## this reads the same purchases array for anything account-wide: the
-## PATRON/FOUNDER badge PlayerProfile already computed, plus any per-pack
-## cosmetic perk (decal/special effect) a Tier 1 purchase unlocks, so a
-## paying player can see what their purchase actually earned them without
-## having to open the Assembly Bay and page through the skin picker first.
-func _refresh_badges_ui(purchases: Array) -> void:
-	for child in _badges_vbox.get_children():
-		child.queue_free()
-
-	var lines: Array = []
-	if PlayerProfile.is_founder:
-		lines.append("★ Founding Citizen -- name etched on the Founders Monument")
-	elif PlayerProfile.is_paid:
-		lines.append("✦ Patron -- thank you for supporting the Commonwealth")
-
-	for purchase in purchases:
-		var product_name = purchase.get("product_name")
-		if product_name == null:
-			continue
-		var reward = Tier1SkinCatalog.get_reward(product_name)
-		if reward.is_empty():
-			continue
-		if not reward.get("decal_path", "").is_empty():
-			lines.append("- %s: decal unlocked" % product_name)
-		if not reward.get("special_effect", "").is_empty():
-			lines.append("- %s: %s effect unlocked" % [product_name, reward["special_effect"].replace("_", " ")])
-
-	if lines.is_empty():
-		var empty_label = Label.new()
-		empty_label.text = "(no badges yet -- purchases in the Heritage Fleet Store unlock these)"
-		empty_label.add_theme_font_size_override("font_size", 11)
-		empty_label.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
-		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_badges_vbox.add_child(empty_label)
-		return
-
-	for line in lines:
-		var label = Label.new()
-		label.text = line
-		label.add_theme_font_size_override("font_size", 11)
-		label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.4))
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_badges_vbox.add_child(label)
-
-# The "skins" storage bucket is private (see 0001_init.sql), so a plain
-# public URL won't work -- has to go through Supabase's sign endpoint
-# first, same as web/app/(app)/marketplace/page.tsx does server-side.
-# Each thumbnail gets its own throwaway HTTPRequest pair (sign, then
-# download) since several can be in flight at once for a longer skins list.
-func _load_skin_thumbnail(thumb: TextureRect, path: String) -> void:
-	var sign_request = HTTPRequest.new()
-	add_child(sign_request)
-	var sign_url = "%s/storage/v1/object/sign/skins/%s" % [AevoriaAuth.SUPABASE_URL, path]
-	var headers = [
-		"apikey: %s" % AevoriaAuth.SUPABASE_ANON_KEY,
-		"Authorization: Bearer %s" % AevoriaAuth.access_token,
-		"Content-Type: application/json",
-	]
-	var body = JSON.stringify({"expiresIn": 600})
-	sign_request.request_completed.connect(func(_result, response_code, _resp_headers, resp_body):
-		sign_request.queue_free()
-		if response_code != 200:
-			return
-		var data = JSON.parse_string(resp_body.get_string_from_utf8())
-		if not (data is Dictionary) or not data.has("signedURL"):
-			return
-		_download_skin_thumbnail(thumb, "%s/storage/v1%s" % [AevoriaAuth.SUPABASE_URL, data["signedURL"]])
-	)
-	sign_request.request(sign_url, headers, HTTPClient.METHOD_POST, body)
-
-func _download_skin_thumbnail(thumb: TextureRect, image_url: String) -> void:
-	var image_request = HTTPRequest.new()
-	add_child(image_request)
-	image_request.request_completed.connect(func(_result, response_code, _resp_headers, image_bytes):
-		image_request.queue_free()
-		if response_code != 200:
-			return
-		var image = Image.new()
-		# Try each format in turn -- the response has no reliable
-		# extension to key off (it's a signed URL, not a file path).
-		var loaded = (
-			image.load_png_from_buffer(image_bytes) == OK
-			or image.load_jpg_from_buffer(image_bytes) == OK
-			or image.load_webp_from_buffer(image_bytes) == OK
-		)
-		if loaded:
-			thumb.texture = ImageTexture.create_from_image(image)
-	)
-	image_request.request(image_url, [], HTTPClient.METHOD_GET)

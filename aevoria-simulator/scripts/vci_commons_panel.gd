@@ -25,20 +25,27 @@ func _ready() -> void:
 
 	var column = VBoxContainer.new()
 	column.custom_minimum_size = Vector2(360, 0)
-	# Real corner anchor (see account_panel.gd's matching comment) so this
-	# follows the window on resize/fullscreen instead of staying put at
-	# wherever the window happened to be sized at launch.
+	column.add_theme_constant_override("separation", 12)
+	add_child(column)
+
+	_build_vci_panel(column, state)
+	_build_commons_panel(column, state)
+
+	# PRESET_MODE_MINSIZE's offset math reads get_combined_minimum_size(),
+	# which for a Container reflects its CHILDREN's minimum sizes -- calling
+	# this before column had any children (the original order here) meant
+	# it read essentially zero width, anchoring the whole panel into a
+	# sliver a couple pixels wide at the right edge with all its text
+	# rendering off past the window boundary (confirmed via pixel-sampling
+	# a screenshot: no left border was found anywhere near where a 360px-
+	# wide panel should have one). Building all content first, then
+	# applying the preset, is what makes MINSIZE mode compute a real size.
 	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
 	# The preset alone leaves grow_horizontal at its default (END, i.e.
 	# grows further right) -- for a right-docked column that grows the
 	# minimum-size rect off the edge of the screen instead of leftward
 	# from the anchor. Force it explicitly.
 	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	column.add_theme_constant_override("separation", 12)
-	add_child(column)
-
-	_build_vci_panel(column, state)
-	_build_commons_panel(column, state)
 
 func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var panel = PanelContainer.new()
@@ -124,12 +131,50 @@ func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 	resources_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
 	outer.add_child(resources_header)
 
-	var resources_label = Label.new()
-	resources_label.add_theme_font_size_override("font_size", 11)
-	resources_label.custom_minimum_size = Vector2(330, 0)
-	resources_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	resources_label.text = _format_resources(state["resources"])
-	outer.add_child(resources_label)
+	# One bullet per resource, not one big comma-joined/wrapped paragraph --
+	# far easier to scan at a glance. Resources vci_tracker.gd already has
+	# a TARGETS entry for (the ones actually consumed somewhere -- Food/
+	# Potable Water/O2/Steel/etc.) double as a color-changing health meter,
+	# same band colors _supply_health_color() already uses for the
+	# Critical Supply Chain section below, so the whole panel reads with
+	# one consistent color language. Resources with no target yet (Nickel,
+	# Regolith, UHPC Concrete, Shield Plating) stay a neutral color rather
+	# than implying a health reading that doesn't exist.
+	#
+	# Now that the resource catalog has grown past a dozen entries, one
+	# bullet per line is tall enough to run this panel into the Account
+	# panel docked below it (same "off-screen content" lesson as the VCI
+	# breakdown above and every level-card list before it) -- height-capped
+	# scroll instead of letting it grow unbounded.
+	var resources_scroll = ScrollContainer.new()
+	resources_scroll.custom_minimum_size = Vector2(330, 130)
+	resources_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(resources_scroll)
+	var resources_vbox = VBoxContainer.new()
+	resources_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	resources_scroll.add_child(resources_vbox)
+
+	var resources = state["resources"]
+	var keys = resources.keys()
+	keys.sort()
+	for key in keys:
+		var row = Label.new()
+		var amount = float(resources[key])
+		row.text = "•  %s: %.1f" % [key, amount]
+		row.add_theme_font_size_override("font_size", 11)
+		row.custom_minimum_size = Vector2(330, 0)
+		row.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if VCITracker.TARGETS.has(key):
+			var pct = clamp(amount / float(VCITracker.TARGETS[key]) * 100.0, 0.0, 100.0)
+			row.add_theme_color_override("font_color", _supply_health_color(pct))
+		else:
+			row.add_theme_color_override("font_color", Color(0.8, 0.85, 0.9))
+		resources_vbox.add_child(row)
+	if resources.is_empty():
+		var empty_label = Label.new()
+		empty_label.text = "(nothing banked yet)"
+		empty_label.add_theme_font_size_override("font_size", 11)
+		resources_vbox.add_child(empty_label)
 
 	outer.add_child(HSeparator.new())
 
@@ -220,12 +265,3 @@ func _band_color(band: int) -> Color:
 		_:
 			return Color(0.95, 0.35, 0.35)
 
-func _format_resources(resources: Dictionary) -> String:
-	if resources.is_empty():
-		return "(nothing banked yet)"
-	var parts: Array = []
-	var keys = resources.keys()
-	keys.sort()
-	for key in keys:
-		parts.append("%s: %.1f" % [key, float(resources[key])])
-	return ", ".join(parts)
