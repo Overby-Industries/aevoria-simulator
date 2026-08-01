@@ -131,8 +131,12 @@ func _build_ui():
 	_status_label.add_theme_font_size_override("font_size", 11)
 	outer.add_child(_status_label)
 
+	# Shortened in embedded_mode (from 110) to open up a clear margin above
+	# ConsoleLogPanel, which docks to the bottom of the screen independently
+	# and doesn't know this panel's height -- the gap between the two is
+	# entirely a function of keeping this one short.
 	var scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 110 if embedded_mode else 180)
+	scroll.custom_minimum_size = Vector2(0, 70 if embedded_mode else 180)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)
 	_names_vbox = VBoxContainer.new()
