@@ -12,6 +12,7 @@ extends Node3D
 ## this: the panels blur *this* scene, not a flat color.
 
 const Starfield = preload("res://scripts/starfield.gd")
+const SpaceEnvironment = preload("res://scripts/space_environment.gd")
 
 const COLOR_HULL = Color("1c2a45")
 const COLOR_AMBER = Color("ff9f1c")
@@ -31,6 +32,15 @@ const SUN_POSITION := Vector3(-2.46, 3.66, -6.94)
 # sprites placed along the line from the light's projected screen
 # position through the screen center, at various t (0 = on the sun,
 # 1 = at screen center, >1 = past center on the opposite side).
+## Real anamorphic lenses squeeze the image horizontally on capture, so an
+## out-of-focus point (bokeh) comes out stretched tall/thin once
+## unsqueezed on projection -- a vertical oval, not the perfect circle
+## _make_radial_texture()'s gradient would otherwise draw. Applied to the
+## round "ghost" sprites only (_update_lens_flare, shape == "circle") --
+## STREAK_SPECS below are already the horizontal anamorphic streak, a
+## separate and correct shape.
+const BOKEH_VERTICAL_STRETCH = 1.4
+
 const FLARE_SPECS = [
 	{"t": 0.0, "scale": 2.6, "color": Color(1.0, 0.95, 0.8, 0.55)},
 	{"t": 0.0, "scale": 1.1, "color": Color(1.0, 1.0, 0.95, 0.9)},
@@ -86,24 +96,7 @@ func _process(delta: float) -> void:
 	_update_lens_flare()
 
 func _build_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	# Near-black, not pure black -- a hair of blue keeps it from reading
-	# as a broken/transparent viewport.
-	env.background_color = Color(0.006, 0.007, 0.012)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.04, 0.045, 0.06)
-	env.ambient_light_energy = 0.5
-	# Glow/bloom is what makes the sun's emissive sphere actually read as
-	# a glare instead of a flat bright dot -- the other "lens flare" half
-	# is the hand-placed 2D ghost sprites in _build_lens_flare/_update_lens_flare.
-	env.glow_enabled = true
-	env.glow_intensity = 1.6
-	env.glow_bloom = 0.35
-	env.glow_hdr_threshold = 1.0
-	var world_env := WorldEnvironment.new()
-	world_env.environment = env
-	add_child(world_env)
+	add_child(SpaceEnvironment.build())
 
 func _build_camera() -> void:
 	_camera = Camera3D.new()
@@ -318,7 +311,7 @@ func _update_lens_flare() -> void:
 			size = Vector2(sprite.get_meta("streak_w"), sprite.get_meta("streak_h"))
 		else:
 			var scale: float = sprite.get_meta("flare_scale")
-			size = Vector2(130.0 * scale, 130.0 * scale)
+			size = Vector2(130.0 * scale, 130.0 * scale * BOKEH_VERTICAL_STRETCH)
 		sprite.size = size
 		sprite.position = pos - size * 0.5
 		sprite.visible = true

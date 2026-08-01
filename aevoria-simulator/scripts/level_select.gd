@@ -16,6 +16,7 @@ const FoundersMonument = preload("res://scripts/founders_monument.gd")
 const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCICommonsPanel = preload("res://scripts/vci_commons_panel.gd")
+const CycleStatusPanel = preload("res://scripts/cycle_status_panel.gd")
 
 const FACTION_IDS = [
 	LevelCatalog.AEVORIA_COMMONWEALTH,
@@ -33,10 +34,12 @@ func _ready() -> void:
 	add_child(ConsoleLogPanel.new())
 	SystemLog.log("Level Select loaded.")
 	_build_ui()
-	# Shown automatically on the game's front door (see founders_monument.gd);
-	# the "Admire" button below reopens it any time after this first look.
+	# Docked permanently in embedded_mode -- no more auto-popup-on-load with
+	# a Close button to click through every visit (see founders_monument.gd).
 	_founders_monument = FoundersMonument.new()
+	_founders_monument.embedded_mode = true
 	add_child(_founders_monument)
+	_build_situation_view_button()
 
 func _build_ui() -> void:
 	var canvas = CanvasLayer.new()
@@ -92,13 +95,60 @@ func _build_ui() -> void:
 	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
 	outer.add_child(sandbox_button)
 
-	var monument_button = Button.new()
-	monument_button.text = "Admire the Founders Monument"
-	monument_button.theme_type_variation = "GlassButton"
-	monument_button.pressed.connect(func(): _founders_monument.show_monument())
-	outer.add_child(monument_button)
-
 	add_child(VCICommonsPanel.new(_faction_id))
+	add_child(CycleStatusPanel.new(_faction_id))
+
+## A standalone panel, separate from the level-roster card list, docked
+## near the bottom-center of the screen -- roughly below where
+## HeroBackdrop's fixed camera frames the torus station (hero_backdrop.gd
+## never moves its camera, so a hand-placed screen position is stable
+## here the same way SUN_POSITION is hand-placed there). This is the
+## user's requested "click here for solar system table" entry point;
+## there's no raycast/Area3D picking anywhere in this codebase to make
+## the torus mesh itself clickable, so a button is the consistent choice.
+func _build_situation_view_button() -> void:
+	var canvas = CanvasLayer.new()
+	add_child(canvas)
+
+	var panel = PanelContainer.new()
+	panel.theme = ThemeBootstrap.theme
+	panel.theme_type_variation = "GlassPanelFrame"
+	panel.custom_minimum_size = Vector2(380, 0)
+	# Must be in the tree, with its content already built, before
+	# set_anchors_and_offsets_preset() -- otherwise PRESET_MODE_MINSIZE
+	# computes the offset against a stale/zero size instead of the panel's
+	# real height, which is what put this panel's bottom margin at ~160px
+	# instead of the 20px every other docked panel uses (see
+	# vci_commons_panel.gd's matching fix/comment).
+	canvas.add_child(panel)
+
+	var panel_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
+	panel.add_child(panel_bg)
+
+	var inner = VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 4)
+	panel.add_child(inner)
+
+	var label = Label.new()
+	label.text = "Click here for the Solar System Table -- expand and view sectors"
+	label.add_theme_font_size_override("font_size", 11)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(360, 0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	inner.add_child(label)
+
+	var button = Button.new()
+	button.text = "Solar System Table"
+	button.theme_type_variation = "GlassButton"
+	button.pressed.connect(func():
+		LevelContext.start_level("situation_view", _faction_id)
+		get_tree().change_scene_to_file("res://scenes/SituationView.tscn")
+	)
+	inner.add_child(button)
+
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 ## Row of buttons for switching which faction the player is browsing/
 ## playing as -- a real gameplay feature in every build, not just debug

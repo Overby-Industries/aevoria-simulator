@@ -27,12 +27,17 @@ func _build_ui() -> void:
 	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "GlassPanelFrame"
 	panel.custom_minimum_size = Vector2(440, 0)
+	# Must be in the tree before set_anchors_and_offsets_preset() -- see
+	# vci_commons_panel.gd's matching fix/comment. BOTTOM_LEFT's anchor_top
+	# multiplier is 0 so the horizontal placement was never actually
+	# affected by this bug, but anchor_bottom=1 still is -- fixed for the
+	# same reason and for consistency with every other panel.
+	add_child(panel)
 	# Bottom-left dock, mirroring account_panel.gd's bottom-right anchor
 	# setup -- PRESET_MODE_MINSIZE + an explicit grow direction so this
 	# actually follows the window on resize instead of drifting off-screen.
 	panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	add_child(panel)
 
 	var bg = GlassPanel.make(Color(0.02, 0.03, 0.05, 0.4), 1.0)
 	panel.add_child(bg)

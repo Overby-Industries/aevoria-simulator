@@ -31,30 +31,15 @@ const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const FactionVisuals = preload("res://scripts/faction_visuals.gd")
+const SpaceEnvironment = preload("res://scripts/space_environment.gd")
+const Starfield = preload("res://scripts/starfield.gd")
 
 const WIDE_OFFSET = Vector3(0, 20, 9)
 const ZOOM_OFFSET = Vector3(0, 5, 2.2)
 const TRAVEL_SECONDS = 2.2
 const CAMERA_MOVE_SECONDS = 0.6
 const HOME_POSITION = Vector3(0, 0.3, 10.0)
-
-## Table-icon stand-ins for each faction's real Assembly Bay hull
-## (part_catalog.gd) -- SimpleShapes only knows box/cylinder/capsule/sphere,
-## not the C++-side PartAssembler's composite "winged_fuselage" the SSTO
-## hull actually uses, so the Commonwealth's marker approximates it with a
-## capsule (a sleek fuselage silhouette) rather than literally reproducing
-## the wings. The Combine's tube_rocket_hull_mk1 and the Flotilla's
-## drift_hull_mk1 are already SimpleShapes-native primitives (cylinder/box
-## respectively), so those two are exact shape matches, just at icon
-## scale. Colors are each hull's HULL_SKIN_SUGGESTIONS highlight_color.
-static func _ship_marker_spec(faction_id: String) -> Dictionary:
-	match faction_id:
-		LevelCatalog.OLIGARCH_COMBINE:
-			return {"shape": "cylinder", "radius": 0.28, "height": 0.85, "color": "b8862b"}
-		LevelCatalog.NOMAD_FLOTILLA:
-			return {"shape": "box", "size": Vector3(0.45, 0.35, 1.0), "color": "c9a227"}
-		_:
-			return {"shape": "capsule", "radius": 0.22, "height": 0.9, "color": "ffffff"}
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -79,7 +64,9 @@ var _zoom_out_button: Button
 
 func _ready():
 	add_child(LevelChrome.new())
-	_nodes = ResourceNodeCatalog.build_field(6, 4)
+	add_child(SpaceEnvironment.build())
+	Starfield.spawn(self)
+	_nodes = ResourceNodeCatalog.build_field(6, 4, 3, 3)
 	for node_data in _nodes:
 		_spawn_node(node_data)
 	_spawn_ship_marker()
@@ -97,16 +84,27 @@ func _flat(position: Vector3) -> Vector3:
 	# its original position for anything that wants the un-flattened field.
 	return Vector3(position.x, 0.0, position.z)
 
+## node_type -> {emission color, energy, label tint} -- was a plain
+## is_comet ternary before Nickel/Regolith existed; every node type now
+## gets its own readable-at-a-glance tint instead of falling back to the
+## asteroid default.
+const NODE_LOOK = {
+	"comet": {"emission": Color("6fb8ff"), "energy": 0.4, "label": Color("dff3ff")},
+	"nickel_ore": {"emission": Color("b8c4cc"), "energy": 0.35, "label": Color("dde6ea")},
+	"regolith_deposit": {"emission": Color("c9a97a"), "energy": 0.3, "label": Color("ecd9b8")},
+}
+const DEFAULT_NODE_LOOK = {"emission": Color("ffd54a"), "energy": 0.25, "label": Color("ffe9a8")}
+
 func _spawn_node(node_data: Dictionary) -> void:
 	var generator = ProceduralArtGenerator.new()
 	var texture = generator.generate_procedural_texture(node_data["texture_recipe"], 128, 128)
-	var is_comet: bool = node_data["node_type"] == "comet"
+	var look: Dictionary = NODE_LOOK.get(node_data["node_type"], DEFAULT_NODE_LOOK)
 
 	var instance = SimpleShapes.make_mesh_instance({
 		"shape": "sphere", "radial_segments": 12, "rings": 8,
 		"albedo_texture": texture,
-		"emission_color": Color("6fb8ff") if is_comet else Color("ffd54a"),
-		"emission_energy": 0.4 if is_comet else 0.25,
+		"emission_color": look["emission"],
+		"emission_energy": look["energy"],
 	})
 	instance.name = node_data["id"]
 	instance.position = _flat(node_data["position"])
@@ -120,12 +118,12 @@ func _spawn_node(node_data: Dictionary) -> void:
 	label.pixel_size = 0.01
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.position = instance.position + Vector3(0, 0.9, 0)
-	label.modulate = Color("dff3ff") if is_comet else Color("ffe9a8")
+	label.modulate = look["label"]
 	add_child(label)
 	_label_by_id[node_data["id"]] = label
 
 func _spawn_ship_marker() -> void:
-	var spec = _ship_marker_spec(LevelContext.current_faction_id)
+	var spec = FactionVisuals.ship_marker_spec(LevelContext.current_faction_id)
 	var recipe = {"shape": spec["shape"], "emission_color": Color(spec["color"]), "emission_energy": 0.6}
 	if spec.has("size"):
 		recipe["size"] = spec["size"]
