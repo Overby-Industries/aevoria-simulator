@@ -114,10 +114,24 @@ func _build_ui():
 
 	outer.add_child(HSeparator.new())
 
+	# Two destinations, not one -- Refinery Bay is a room inside the
+	# Hangar Deck, not a direct child of Level Select, so "back" is
+	# ambiguous without both options (see main_hangar_deck.gd).
+	var nav_row = HBoxContainer.new()
+	nav_row.add_theme_constant_override("separation", 6)
+	outer.add_child(nav_row)
+
+	var hangar_button = Button.new()
+	hangar_button.text = "Back to Hangar Deck"
+	hangar_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hangar_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/MainHangarDeck.tscn"))
+	nav_row.add_child(hangar_button)
+
 	var back_button = Button.new()
 	back_button.text = "Back to Level Select"
+	back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
-	outer.add_child(back_button)
+	nav_row.add_child(back_button)
 
 func _make_glass_background(tint: Color) -> ColorRect:
 	var bg = ColorRect.new()
@@ -155,6 +169,7 @@ func _refresh():
 		var recipe = RECIPES[i]
 		var have = float(state["resources"].get(recipe["input_resource"], 0.0))
 		_recipe_buttons[i].disabled = have < recipe["input_amount"]
+		_recipe_buttons[i].tooltip_text = "" if have >= recipe["input_amount"] else "Need %.1f %s (have %.1f)." % [recipe["input_amount"], recipe["input_resource"], have]
 
 func _on_smelt_pressed(recipe_index: int):
 	var recipe = RECIPES[recipe_index]

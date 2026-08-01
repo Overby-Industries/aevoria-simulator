@@ -287,6 +287,23 @@ This is the part worth understanding in detail if you want to tune it:
 {"t": 2.0, "scale": 0.2, "color": Color(0.8, 0.5, 1.0, 0.15)}
 ```
 
+### A second worked example: Main Hangar Deck's interior
+
+`hangar_backdrop.gd` (instantiated from `main_hangar_deck.gd`'s `_ready()`,
+same one-line pattern as `HeroBackdrop`) is the interior counterpart —
+floor, back wall, entrance archway, ceiling truss, pillars, and the two
+rainbow accent banners, all built from the exact same primitives as System
+2 above (it calls `SimpleShapes.make_mesh_instance()`/`make_point_light()`
+throughout, it just also adds its own `WorldEnvironment` and a couple of
+extra lights the way `hero_backdrop.gd` does). If you want a similar
+interior for another level, this is a closer starting template than
+`hero_backdrop.gd` itself — it's dressing a room with a fixed camera
+looking into it, not an exterior space scene with a rotating hull
+silhouette. Every position in it is hand-placed against
+`MainHangarDeck.tscn`'s specific camera transform (see the file's own top
+comment for the exact numbers), same "camera never moves, geometry is
+placed to fit it" approach as `SUN_POSITION` above.
+
 ## System 5: The glass/amber UI theme
 
 The frosted-glass panels and amber-outlined buttons used across

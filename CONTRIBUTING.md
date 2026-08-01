@@ -126,15 +126,18 @@ faction's one or two dedicated levels (`oligarch_boardroom.gd`,
 `part_catalog.gd` — adding more of either faction's own levels is the
 open work, not adding the switcher itself.
 
-**Known gap, deliberately deferred:** most levels are still a plain gray
+**Known gap, partially addressed:** most levels are still a plain gray
 background with a camera/light and a UI panel — no real 3D scene dressing.
-The plan (as of 2026-07-29) is to flesh out VCI tracking first (see
+Level Select (`hero_backdrop.gd`/`starfield.gd`) and Main Hangar Deck
+(`hangar_backdrop.gd`) now have real dressing; the production bays,
+governance levels, and the situation tables/view still don't. The plan (as
+of 2026-07-29) is to flesh out VCI tracking first (see
 [docs/VCI_TRACKING.md](docs/VCI_TRACKING.md)) so there's a real objective
-system to build longer, multi-level campaigns against, and to give each
-level a proper 3D scene as part of that campaign work rather than as a
-separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd` (see
-[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s "System 4") are the
-reusable pieces this would build on when the time comes.
+system to build longer, multi-level campaigns against, and to give the
+remaining levels a proper 3D scene as part of that campaign work rather
+than as a separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd`/
+`hangar_backdrop.gd` (see [docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s
+"System 4") are the reusable pieces this would build on when the time comes.
 5. If the level's UI panel might grow past a few items, wrap it in a
    `ScrollContainer` from the start (see any level's `_build_ui()`) — this bit
    the project twice already (`AssemblyBay`, then `LevelSelect` itself) once a

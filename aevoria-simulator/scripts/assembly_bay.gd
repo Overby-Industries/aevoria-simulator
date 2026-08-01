@@ -444,10 +444,26 @@ func _build_ui():
 	_finish_button.pressed.connect(_on_finish_pressed)
 	outer.add_child(_finish_button)
 
+	# Two destinations, not one -- Assembly Bay is a room inside the Hangar
+	# Deck, not a direct child of Level Select, so "back" is ambiguous
+	# without both options. See main_hangar_deck.gd for the parent hub this
+	# now offers a one-click return to, instead of only the whole-way-back
+	# option every level used to have.
+	var nav_row = HBoxContainer.new()
+	nav_row.add_theme_constant_override("separation", 6)
+	outer.add_child(nav_row)
+
+	var hangar_button = Button.new()
+	hangar_button.text = "Back to Hangar Deck"
+	hangar_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hangar_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/MainHangarDeck.tscn"))
+	nav_row.add_child(hangar_button)
+
 	_back_button = Button.new()
 	_back_button.text = "Back to Level Select"
+	_back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
-	outer.add_child(_back_button)
+	nav_row.add_child(_back_button)
 
 func _make_glass_background(tint: Color) -> ColorRect:
 	var bg = ColorRect.new()
@@ -506,6 +522,12 @@ func _refresh_palette_ui():
 		if fits:
 			var part_id = part.part_id
 			button.pressed.connect(func(): _on_part_button_pressed(part_id))
+		elif not has_selection:
+			button.tooltip_text = "Select an open socket above first."
+		elif not _part_available_to_current_faction(part):
+			button.tooltip_text = "Exclusive to %s -- not buildable by your faction." % LevelCatalog.faction_label(part.faction_id)
+		else:
+			button.tooltip_text = "Doesn't fit the selected socket's attachment type."
 		_palette_vbox.add_child(button)
 
 	if not has_selection:

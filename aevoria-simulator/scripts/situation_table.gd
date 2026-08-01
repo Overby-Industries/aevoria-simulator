@@ -306,6 +306,7 @@ func _on_mine_pressed() -> void:
 
 	_traveling = true
 	_mine_button.disabled = true
+	_mine_button.tooltip_text = "Ship is en route -- wait for it to arrive."
 	var target_id = _selected_id
 	var target_position = _flat(node_data["position"])
 	_status_label.text = "Ship en route to %s..." % node_data["display_name"]
@@ -317,6 +318,7 @@ func _on_mine_pressed() -> void:
 func _on_ship_arrived(node_id: String) -> void:
 	_traveling = false
 	_mine_button.disabled = false
+	_mine_button.tooltip_text = ""
 	_ship_position = _ship_marker.position
 
 	var node_data = _find_node_data(node_id)

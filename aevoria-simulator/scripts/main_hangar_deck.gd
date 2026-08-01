@@ -14,21 +14,23 @@ extends Node3D
 ## both already centralized in LevelCatalog.hangar_deck_label()/
 ## hangar_levels().
 ##
-## Deliberately just a UI hub, not a full walkable 3D hangar interior --
-## that's the "known gap, deliberately deferred" CONTRIBUTING.md already
-## documents for level dressing generally (real 3D scenes come with the
-## campaign work). What this scene does do for real: it's an actual
-## intermediate location with its own faction-aware header and back
-## button, not a cosmetic wrapper -- Level Select no longer has to show
-## four cards to do what one door now does.
+## Not a walkable 3D hangar interior -- there's no raycast/Area3D picking
+## anywhere in this codebase, so hangar_backdrop.gd's dressing behind the
+## fixed camera is scenery, same role hero_backdrop.gd plays on Level
+## Select, not a room you actually move through. It's still a real
+## intermediate location, not a cosmetic wrapper: its own faction-aware
+## header and back button -- Level Select no longer has to show four
+## cards to do what one door now does.
 
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const HangarBackdrop = preload("res://scripts/hangar_backdrop.gd")
 
 @onready var camera: Camera3D = $Camera3D
 
 func _ready():
+	add_child(HangarBackdrop.new())
 	add_child(LevelChrome.new())
 	camera.make_current()
 	_build_ui()
