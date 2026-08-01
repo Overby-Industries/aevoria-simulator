@@ -141,18 +141,15 @@ func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 	# Regolith, UHPC Concrete, Shield Plating) stay a neutral color rather
 	# than implying a health reading that doesn't exist.
 	#
-	# Now that the resource catalog has grown past a dozen entries, one
-	# bullet per line is tall enough to run this panel into the Account
-	# panel docked below it (same "off-screen content" lesson as the VCI
-	# breakdown above and every level-card list before it) -- height-capped
-	# scroll instead of letting it grow unbounded.
-	var resources_scroll = ScrollContainer.new()
-	resources_scroll.custom_minimum_size = Vector2(330, 130)
-	resources_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(resources_scroll)
+	# Used to be height-capped with a ScrollContainer here since one bullet
+	# per line ran this panel into the Account panel docked below it -- the
+	# user wants every bulleted resource visible without scrolling, and
+	# account_panel.gd no longer carries the tall Skins/Badges content that
+	# caused the overlap, so there's room to let this grow to its full
+	# height uncapped now.
 	var resources_vbox = VBoxContainer.new()
 	resources_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	resources_scroll.add_child(resources_vbox)
+	outer.add_child(resources_vbox)
 
 	var resources = state["resources"]
 	var keys = resources.keys()

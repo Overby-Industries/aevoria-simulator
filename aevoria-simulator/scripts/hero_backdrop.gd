@@ -32,6 +32,15 @@ const SUN_POSITION := Vector3(-2.46, 3.66, -6.94)
 # sprites placed along the line from the light's projected screen
 # position through the screen center, at various t (0 = on the sun,
 # 1 = at screen center, >1 = past center on the opposite side).
+## Real anamorphic lenses squeeze the image horizontally on capture, so an
+## out-of-focus point (bokeh) comes out stretched tall/thin once
+## unsqueezed on projection -- a vertical oval, not the perfect circle
+## _make_radial_texture()'s gradient would otherwise draw. Applied to the
+## round "ghost" sprites only (_update_lens_flare, shape == "circle") --
+## STREAK_SPECS below are already the horizontal anamorphic streak, a
+## separate and correct shape.
+const BOKEH_VERTICAL_STRETCH = 1.4
+
 const FLARE_SPECS = [
 	{"t": 0.0, "scale": 2.6, "color": Color(1.0, 0.95, 0.8, 0.55)},
 	{"t": 0.0, "scale": 1.1, "color": Color(1.0, 1.0, 0.95, 0.9)},
@@ -302,7 +311,7 @@ func _update_lens_flare() -> void:
 			size = Vector2(sprite.get_meta("streak_w"), sprite.get_meta("streak_h"))
 		else:
 			var scale: float = sprite.get_meta("flare_scale")
-			size = Vector2(130.0 * scale, 130.0 * scale)
+			size = Vector2(130.0 * scale, 130.0 * scale * BOKEH_VERTICAL_STRETCH)
 		sprite.size = size
 		sprite.position = pos - size * 0.5
 		sprite.visible = true

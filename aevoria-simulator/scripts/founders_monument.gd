@@ -3,10 +3,15 @@ extends CanvasLayer
 ## The Founders Monument -- a plaque listing everyone who's bought the
 ## "Founding Citizen" Commemorative Bundle, fulfilling that pack's "your
 ## name etched into the Founders Monument loading screen" promise (see
-## web/scripts/create-tier1-products.mjs). Shown automatically the moment
-## the game's front door (LevelSelect) loads, dismissible, and reopenable
-## any time via the "Admire the Founders Monument" button level_select.gd
-## adds to the hub.
+## web/scripts/create-tier1-products.mjs).
+##
+## Used to auto-open as a full-screen dismissible popup every time
+## LevelSelect loaded -- the user got tired of clicking Close on every
+## visit. Now embedded_mode (set by level_select.gd before add_child())
+## renders it as a plain docked panel instead: no scrim, no Close button,
+## always visible, sized to its own content instead of centered on the
+## screen. The popup code path is left intact for embedded_mode = false in
+## case a dismissible popup is ever wanted elsewhere.
 ##
 ## FOUNDERS_API_URL always points at production -- unlike aevoria_auth.gd,
 ## this doesn't split by debug/dev build. The founder list is a low-stakes
@@ -17,6 +22,9 @@ extends CanvasLayer
 const FOUNDERS_API_URL = "https://www.aevoria.space/api/founders"
 
 const GlassPanel = preload("res://scripts/glass_panel.gd")
+
+## Set before add_child() -- see level_select.gd.
+var embedded_mode: bool = false
 
 var _panel: PanelContainer
 var _names_vbox: VBoxContainer
@@ -66,11 +74,12 @@ func _on_fetch_completed(_result, response_code, _headers, body):
 		_names_vbox.add_child(label)
 
 func _build_ui():
-	var scrim = ColorRect.new()
-	scrim.color = Color(0, 0, 0, 0.6)
-	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(scrim)
+	if not embedded_mode:
+		var scrim = ColorRect.new()
+		scrim.color = Color(0, 0, 0, 0.6)
+		scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+		scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(scrim)
 
 	_panel = PanelContainer.new()
 	_panel.theme = ThemeBootstrap.theme
@@ -81,9 +90,16 @@ func _build_ui():
 	# stale/default parent size doesn't just nudge the panel, it can
 	# genuinely miscenter it.
 	add_child(_panel)
-	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.LayoutPresetMode.PRESET_MODE_MINSIZE)
-	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	if embedded_mode:
+		# Docked in the gap between LevelSelect's level-roster panel and
+		# ConsoleLogPanel, both anchored top-left/bottom-left in the same
+		# left-hand column -- see level_select.gd's _build_founders_panel().
+		_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		_panel.position = Vector2(20, 630)
+	else:
+		_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.LayoutPresetMode.PRESET_MODE_MINSIZE)
+		_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_panel.theme_type_variation = "GlassPanelFrame"
 
 	var glass = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.75), 1.0)
@@ -116,15 +132,18 @@ func _build_ui():
 	outer.add_child(_status_label)
 
 	var scroll = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 180)
+	scroll.custom_minimum_size = Vector2(0, 110 if embedded_mode else 180)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)
 	_names_vbox = VBoxContainer.new()
 	_names_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_names_vbox)
 
-	var close_button = Button.new()
-	close_button.text = "Close"
-	close_button.theme_type_variation = "GlassButton"
-	close_button.pressed.connect(func(): visible = false)
-	outer.add_child(close_button)
+	# Embedded mode is a permanent docked panel, not a dismissible popup --
+	# no Close button, nothing to click through every time the level loads.
+	if not embedded_mode:
+		var close_button = Button.new()
+		close_button.text = "Close"
+		close_button.theme_type_variation = "GlassButton"
+		close_button.pressed.connect(func(): visible = false)
+		outer.add_child(close_button)

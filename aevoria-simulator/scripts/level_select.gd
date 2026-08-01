@@ -34,9 +34,10 @@ func _ready() -> void:
 	add_child(ConsoleLogPanel.new())
 	SystemLog.log("Level Select loaded.")
 	_build_ui()
-	# Shown automatically on the game's front door (see founders_monument.gd);
-	# the "Admire" button below reopens it any time after this first look.
+	# Docked permanently in embedded_mode -- no more auto-popup-on-load with
+	# a Close button to click through every visit (see founders_monument.gd).
 	_founders_monument = FoundersMonument.new()
+	_founders_monument.embedded_mode = true
 	add_child(_founders_monument)
 	_build_situation_view_button()
 
@@ -94,12 +95,6 @@ func _build_ui() -> void:
 	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
 	outer.add_child(sandbox_button)
 
-	var monument_button = Button.new()
-	monument_button.text = "Admire the Founders Monument"
-	monument_button.theme_type_variation = "GlassButton"
-	monument_button.pressed.connect(func(): _founders_monument.show_monument())
-	outer.add_child(monument_button)
-
 	add_child(VCICommonsPanel.new(_faction_id))
 	add_child(CycleStatusPanel.new(_faction_id))
 
@@ -119,8 +114,12 @@ func _build_situation_view_button() -> void:
 	panel.theme = ThemeBootstrap.theme
 	panel.theme_type_variation = "GlassPanelFrame"
 	panel.custom_minimum_size = Vector2(380, 0)
-	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	panel.position = Vector2(-190, -160)
+	# Must be in the tree, with its content already built, before
+	# set_anchors_and_offsets_preset() -- otherwise PRESET_MODE_MINSIZE
+	# computes the offset against a stale/zero size instead of the panel's
+	# real height, which is what put this panel's bottom margin at ~160px
+	# instead of the 20px every other docked panel uses (see
+	# vci_commons_panel.gd's matching fix/comment).
 	canvas.add_child(panel)
 
 	var panel_bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
@@ -146,6 +145,10 @@ func _build_situation_view_button() -> void:
 		get_tree().change_scene_to_file("res://scenes/SituationView.tscn")
 	)
 	inner.add_child(button)
+
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.LayoutPresetMode.PRESET_MODE_MINSIZE, 20)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 ## Row of buttons for switching which faction the player is browsing/
 ## playing as -- a real gameplay feature in every build, not just debug
