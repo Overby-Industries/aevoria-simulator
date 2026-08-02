@@ -27,11 +27,27 @@ const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
 const HangarBackdrop = preload("res://scripts/hangar_backdrop.gd")
 
+## One per bay card, in the order LevelCatalog.hangar_levels() returns them
+## (Assembly Bay, then the three production bays) -- the rainbow accent
+## that replaced hangar_backdrop.gd's door banners once the hangar itself
+## went back to plain white/gold (see that file's top comment).
+const CARD_ACCENT_COLORS = [
+	Color("e4342f"),  # Assembly Bay -- red
+	Color("3aa655"),  # Greenhouse Bay -- green
+	Color("2b6cb0"),  # Refinery Bay -- blue
+	Color("7b4fa6"),  # Electrolysis Bay -- violet
+]
+
 @onready var camera: Camera3D = $Camera3D
 
 func _ready():
 	add_child(HangarBackdrop.new())
-	add_child(LevelChrome.new())
+	# Opaque white cards read fine against a bright hangar; the shared
+	# glass HUD panels don't (see level_chrome.gd's light_theme comment) --
+	# this is what makes the bright backdrop below viable again.
+	var chrome = LevelChrome.new()
+	chrome.light_theme = true
+	add_child(chrome)
 	camera.make_current()
 	_build_ui()
 
@@ -69,8 +85,10 @@ func _build_ui() -> void:
 	outer.add_child(HSeparator.new())
 
 	var state = FactionHomeBase.load_state(faction_id)
-	for level in LevelCatalog.hangar_levels(faction_id):
-		outer.add_child(_build_bay_card(level, faction_id, state))
+	var levels = LevelCatalog.hangar_levels(faction_id)
+	for i in range(levels.size()):
+		var accent = CARD_ACCENT_COLORS[i % CARD_ACCENT_COLORS.size()]
+		outer.add_child(_build_bay_card(levels[i], faction_id, state, accent))
 
 	outer.add_child(HSeparator.new())
 
@@ -80,9 +98,18 @@ func _build_ui() -> void:
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
 	outer.add_child(back_button)
 
-func _build_bay_card(level: Dictionary, faction_id: String, state: Dictionary) -> PanelContainer:
+func _build_bay_card(level: Dictionary, faction_id: String, state: Dictionary, accent_color: Color) -> PanelContainer:
 	var card = PanelContainer.new()
 	card.theme_type_variation = "AevoriaPanel"
+
+	# A colored left-edge stripe per bay, duplicated off the real
+	# AevoriaPanel stylebox (theme_builder.gd) rather than hand-rebuilding
+	# its bg/shadow/corner-radius values here, so this card still picks up
+	# any future change to that shared look automatically.
+	var card_style: StyleBoxFlat = ThemeBootstrap.theme.get_stylebox("panel", "AevoriaPanel").duplicate()
+	card_style.border_width_left = 5
+	card_style.border_color = accent_color
+	card.add_theme_stylebox_override("panel", card_style)
 
 	var inner = VBoxContainer.new()
 	card.add_child(inner)

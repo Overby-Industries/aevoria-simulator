@@ -291,11 +291,16 @@ This is the part worth understanding in detail if you want to tune it:
 
 `hangar_backdrop.gd` (instantiated from `main_hangar_deck.gd`'s `_ready()`,
 same one-line pattern as `HeroBackdrop`) is the interior counterpart —
-floor, back wall, entrance archway, ceiling truss, pillars, and the two
-rainbow accent banners, all built from the exact same primitives as System
-2 above (it calls `SimpleShapes.make_mesh_instance()`/`make_point_light()`
-throughout, it just also adds its own `WorldEnvironment` and a couple of
-extra lights the way `hero_backdrop.gd` does). If you want a similar
+floor, back wall, entrance archway, ceiling truss, pillars, all built from
+the exact same primitives as System 2 above (it calls
+`SimpleShapes.make_mesh_instance()`/`make_point_light()` throughout, it
+just also adds its own `WorldEnvironment` and a couple of extra lights the
+way `hero_backdrop.gd` does). It's also the one level whose shared HUD
+panels (System 5's `GlassPanelFrame`/`GlassButton`) render as opaque white
+`AevoriaPanel`/`AevoriaButton` instead — see `level_chrome.gd`'s
+`light_theme` flag and `hud_panel_theme.gd`, which is what makes a
+genuinely bright backdrop here viable without washing those panels out. If
+you want a similar
 interior for another level, this is a closer starting template than
 `hero_backdrop.gd` itself — it's dressing a room with a fixed camera
 looking into it, not an exterior space scene with a rotating hull

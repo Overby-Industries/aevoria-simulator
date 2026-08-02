@@ -21,11 +21,14 @@ extends CanvasLayer
 ## Same styling convention as vci_commons_panel.gd -- GlassPanelFrame +
 ## GlassPanel.make() background, ThemeBootstrap.theme.
 
-const GlassPanel = preload("res://scripts/glass_panel.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SolarSystemState = preload("res://scripts/solar_system_state.gd")
+const HudPanelTheme = preload("res://scripts/hud_panel_theme.gd")
 
 const GROUP_NAME = "cycle_status_panel"
+
+## Set before add_child() -- see level_chrome.gd's matching flag.
+var light_theme: bool = false
 
 var _faction_id: String
 var _header: Label
@@ -40,7 +43,7 @@ func _ready() -> void:
 
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
-	panel.theme_type_variation = "GlassPanelFrame"
+	panel.theme_type_variation = HudPanelTheme.panel_variation(light_theme)
 	panel.custom_minimum_size = Vector2(380, 0)
 	# set_anchors_and_offsets_preset()'s MINSIZE-mode margin computes
 	# offsets against the control's parent-area size at call time -- since
@@ -57,8 +60,7 @@ func _ready() -> void:
 	panel.position = Vector2(-190, 20)
 	add_child(panel)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
-	panel.add_child(bg)
+	HudPanelTheme.add_background(panel, light_theme, Color(0.05, 0.08, 0.15, 0.35), 1.0)
 
 	var outer = VBoxContainer.new()
 	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -67,13 +69,13 @@ func _ready() -> void:
 
 	_header = Label.new()
 	_header.add_theme_font_size_override("font_size", 14)
-	_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	_header.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 	_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(_header)
 
 	_pop_label = Label.new()
 	_pop_label.add_theme_font_size_override("font_size", 11)
-	_pop_label.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95))
+	_pop_label.add_theme_color_override("font_color", HudPanelTheme.body_color(light_theme))
 	_pop_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(_pop_label)
 
@@ -102,7 +104,7 @@ func refresh() -> void:
 	_status_label.visible = totals["total"] > 0
 	if short:
 		_status_label.text = "WARNING: population at risk of starving -- supply cycle short on resources."
-		_status_label.add_theme_color_override("font_color", Color(0.95, 0.45, 0.4))
+		_status_label.add_theme_color_override("font_color", HudPanelTheme.bad_color(light_theme))
 	else:
 		_status_label.text = "Supply cycle upkeep fully covered."
-		_status_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.6))
+		_status_label.add_theme_color_override("font_color", HudPanelTheme.good_color(light_theme))

@@ -9,9 +9,18 @@ extends Node3D
 ## way as every other prop in this codebase (docs/GRAPHICS_GUIDE.md
 ## System 2, SimpleShapes, pure GDScript primitives, no imported models,
 ## never needs a rebuild). Purely scene dressing, no gameplay meaning,
-## same as hero_backdrop.gd. The two tall banners flanking the entrance
-## are a deliberate rainbow accent against the otherwise white/gold
-## Overby Industries color scheme.
+## same as hero_backdrop.gd.
+##
+## Bright white/gold, matching the reference photo this scene is modeled
+## on -- this only works because main_hangar_deck.gd renders its shared
+## HUD panels (level_chrome.gd) with light_theme = true (opaque white
+## AevoriaPanel cards, see hud_panel_theme.gd). Those panels used to be
+## dark frosted glass tuned for near-black space backdrops, which this
+## bright a scene would have washed out to near-illegible -- see
+## level_chrome.gd's light_theme comment for the fix. Color now lives in
+## the UI instead of the room: main_hangar_deck.gd tints each bay card's
+## left edge a different rainbow color rather than this file painting
+## rainbow banners into the 3D scene.
 ##
 ## Camera framing: MainHangarDeck.tscn's own fixed Camera3D sits at
 ## (0, 5, 14) pitched down ~32.5 degrees toward the origin -- every
@@ -21,23 +30,8 @@ extends Node3D
 
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
-## Kept a fair bit darker than the reference photo's blown-out white --
-## every HUD panel in the game (LevelChrome's VCI/Commons/Account/Cycle
-## panels, docked here exactly like every other level) uses
-## frosted_glass_panel.gdshader, which blends a dark tint over whatever's
-## behind it (COLOR = mix(blurred_scene, tint_color, tint_color.a) -- see
-## that shader). Every other level sits those panels over near-black space
-## (space_environment.gd) or Level Select's dark hero backdrop, so the
-## panel text (white/amber/green) was never designed for high contrast
-## against a bright background. A true bright-white hangar would wash
-## every one of those panels out to near-illegible. Staying moody/mid-gray
-## here with bright emissive accents (gold trim, LED strips, the rainbow
-## banners, the HDR-pushed signage below) keeps both: a hangar that reads
-## as "brightly lit industrial interior" through contrast and glow rather
-## than raw albedo brightness, and HUD panels that stay legible -- the
-## same trick hero_backdrop.gd already uses (dark scene, bright accents).
-const FLOOR_COLOR = Color("55575c")
-const WALL_COLOR = Color("5c5e63")
+const FLOOR_COLOR = Color("d7d9dc")
+const WALL_COLOR = Color("eceef1")
 const ACCENT_GOLD = Color("c9a24b")
 
 const HANGAR_HALF_WIDTH := 9.0
@@ -45,25 +39,11 @@ const HANGAR_DEPTH_NEAR := 16.0   # toward the camera
 const HANGAR_DEPTH_FAR := -18.0   # the back wall
 const CEILING_HEIGHT := 9.0
 
-# The rainbow banners flanking the entrance -- Pride-flag order, top to
-# bottom. A deliberate splash of color against the white/gold hangar, per
-# the reference art this scene is matching.
-const PRIDE_COLORS = [
-	Color("e4342f"),  # red
-	Color("f7941d"),  # orange
-	Color("ffd400"),  # yellow
-	Color("3aa655"),  # green
-	Color("2b6cb0"),  # blue
-	Color("7b4fa6"),  # violet
-]
-
 func _ready() -> void:
 	_build_environment()
 	_build_lights()
 	_build_floor()
 	_build_back_wall()
-	_build_banner(-3.6)
-	_build_banner(3.6)
 	_build_pillars()
 	_build_ceiling()
 	_build_props()
@@ -71,17 +51,16 @@ func _ready() -> void:
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.16, 0.165, 0.18)
+	env.background_color = Color(0.66, 0.69, 0.74)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.55, 0.56, 0.6)
-	env.ambient_light_energy = 0.55
-	# A bit stronger than hero_backdrop.gd's -- this scene leans on bloom
-	# for its whole "brightly lit interior" read (see FLOOR_COLOR's
-	# comment), so the emissive accents need to actually pop.
+	env.ambient_light_color = Color(0.88, 0.9, 0.94)
+	env.ambient_light_energy = 1.0
+	# Modest bloom -- enough for the LED ceiling strips and gold trim to
+	# read as genuinely glowing without a bright white wall blowing out.
 	env.glow_enabled = true
-	env.glow_intensity = 1.3
-	env.glow_bloom = 0.3
-	env.glow_hdr_threshold = 1.0
+	env.glow_intensity = 1.0
+	env.glow_bloom = 0.2
+	env.glow_hdr_threshold = 1.05
 	var world_env := WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)
@@ -178,13 +157,17 @@ func _build_back_wall() -> void:
 	add_child(archway_glow)
 
 	# No "OVERBY INDUSTRIES" wordmark centered high on this wall, even
-	# though the reference photo has one there -- cycle_status_panel.gd
-	# docks a HUD panel top-center on every level, this one included, and
-	# there's no world-space gap between that panel's bottom edge and the
-	# archway that's tall enough for a second line of signage above
-	# "ASSEMBLY BAY" without sitting behind the panel. The two small Overby
-	# marks on the banners below (_build_banner()) carry the branding
-	# instead -- see that function's comment.
+	# though the reference photo has one there. Tried it twice now -- once
+	# assuming a dark-glass panel there would just blend/garble it (wrong:
+	# it read as broken overlapping text), then again assuming going
+	# opaque fixed that (wrong in a different way: cycle_status_panel.gd's
+	# HUD panel docks flush against the top of the screen on every level,
+	# this one included, with essentially no gap above it, so the wordmark
+	# just sits almost entirely hidden behind an opaque card instead of
+	# garbled behind a translucent one -- still not legible either way).
+	# There's no world-space spot at this X that isn't under that panel.
+	# The floor's gold ring emblem below and "ASSEMBLY BAY" carry the
+	# branding instead.
 	var bay_label := Label3D.new()
 	bay_label.text = "ASSEMBLY BAY"
 	bay_label.font_size = 40
@@ -192,65 +175,6 @@ func _build_back_wall() -> void:
 	bay_label.modulate = ACCENT_GOLD
 	bay_label.position = Vector3(0, 4.5, HANGAR_DEPTH_FAR + 0.3)
 	add_child(bay_label)
-
-## Stacked solid-color bands rather than a gradient texture -- guarantees
-## a clean six-band Pride flag regardless of how BoxMesh happens to map
-## UVs per face, and matches this file's "everything is small primitives"
-## style (see greenhouse_bay.gd's rack+LED, refinery_bay.gd's furnace+window
-## for the same pattern elsewhere in the codebase). Also where the Overby
-## mark lives -- see _build_back_wall()'s comment on why it's not a big
-## wordmark centered on the wall instead.
-func _build_banner(x_position: float) -> void:
-	var banner_height := 6.0
-	var band_height := banner_height / PRIDE_COLORS.size()
-	var base_y := 0.5
-
-	var frame = SimpleShapes.make_mesh_instance({
-		"shape": "box", "size": Vector3(1.3, banner_height + 0.3, 0.06),
-		"albedo_color": Color("2a2c30"),
-	})
-	frame.position = Vector3(x_position, base_y + banner_height * 0.5, HANGAR_DEPTH_FAR + 0.52)
-	add_child(frame)
-
-	# Flanks "ASSEMBLY BAY" at the same height rather than sitting above the
-	# banner -- that top-of-banner spot is still behind the Cycle panel
-	# (same collision _build_back_wall() moved the wordmark away from);
-	# this height is the one already proven clear of it. Pinned in FRONT of
-	# the bands (whose front face sits at HANGAR_DEPTH_FAR + 0.66) like a
-	# medallion badge, not behind them where it'd be occluded.
-	var mark_y := 4.3
-	var logo_ring := MeshInstance3D.new()
-	var ring := TorusMesh.new()
-	ring.inner_radius = 0.28
-	ring.outer_radius = 0.4
-	logo_ring.mesh = ring
-	logo_ring.rotation_degrees = Vector3(90, 0, 0)
-	logo_ring.position = Vector3(x_position, mark_y, HANGAR_DEPTH_FAR + 0.78)
-	logo_ring.material_override = _gold_material()
-	add_child(logo_ring)
-
-	var logo_swoosh = SimpleShapes.make_mesh_instance({
-		"shape": "box", "size": Vector3(0.7, 0.09, 0.05),
-		"albedo_color": ACCENT_GOLD,
-		"emission_color": ACCENT_GOLD, "emission_energy": 0.5,
-	})
-	logo_swoosh.rotation_degrees = Vector3(0, 0, -35)
-	logo_swoosh.position = Vector3(x_position, mark_y, HANGAR_DEPTH_FAR + 0.84)
-	add_child(logo_swoosh)
-
-	for i in range(PRIDE_COLORS.size()):
-		var color: Color = PRIDE_COLORS[i]
-		var band = SimpleShapes.make_mesh_instance({
-			"shape": "box", "size": Vector3(1.1, band_height + 0.02, 0.12),
-			"albedo_color": color,
-			"emission_color": color, "emission_energy": 1.2,
-		})
-		band.position = Vector3(x_position, base_y + band_height * (i + 0.5), HANGAR_DEPTH_FAR + 0.6)
-		add_child(band)
-
-	var wash_light = SimpleShapes.make_point_light(Color(0.92, 0.88, 1.0), 1.0, 6.5)
-	wash_light.position = Vector3(x_position, base_y + banner_height * 0.5, HANGAR_DEPTH_FAR + 1.8)
-	add_child(wash_light)
 
 func _build_pillars() -> void:
 	for z_position in [10.0, -2.0, -14.0]:
