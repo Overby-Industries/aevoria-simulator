@@ -162,7 +162,7 @@ cd aevoria-simulator
 python -m SCons platform=windows target=template_debug -j4
 
 # Launch the simulation
-"<path to godot>/Godot_v4.6.3-stable_win64_console.exe" --path aevoria-simulator
+"<path to godot>/Godot_v4.6.3-stable_win64_console.exe" --path godot
 ```
 
 Full build/run/troubleshooting details, project layout, and how to make

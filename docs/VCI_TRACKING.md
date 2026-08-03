@@ -62,7 +62,7 @@ this is), not a way to track multiple simultaneous VCI scores. The score
 itself is machine-wide, one number, same as Capture Risk. `level_select.gd`
 registers a single throwaway `"commonwealth-vci"` entity for this.
 
-## The Godot-side rollup (`aevoria-simulator/scripts/vci_tracker.gd`)
+## The Godot-side rollup (`godot/scripts/vci_tracker.gd`)
 
 This is the actual game-design work: turning real banked-resource state
 (`FactionHomeBase`) into the four category scores above. **Most of VCI's
