@@ -11,9 +11,12 @@ extends CanvasLayer
 ## wired in LevelSelect.tscn/_ready(), so it uses this panel directly
 ## rather than going through LevelChrome).
 
-const GlassPanel = preload("res://scripts/glass_panel.gd")
 const VCITracker = preload("res://scripts/vci_tracker.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
+const HudPanelTheme = preload("res://scripts/hud_panel_theme.gd")
+
+## Set before add_child() -- see level_chrome.gd's matching flag.
+var light_theme: bool = false
 
 var _faction_id: String
 
@@ -50,11 +53,10 @@ func _ready() -> void:
 func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
-	panel.theme_type_variation = "GlassPanelFrame"
+	panel.theme_type_variation = HudPanelTheme.panel_variation(light_theme)
 	column.add_child(panel)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
-	panel.add_child(bg)
+	HudPanelTheme.add_background(panel, light_theme, Color(0.05, 0.08, 0.15, 0.35), 1.0)
 
 	# The full VCI breakdown (4 categories x several sub-measures each) is
 	# taller than the window in a lot of cases -- same off-screen-content
@@ -73,7 +75,7 @@ func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var header = Label.new()
 	header.text = "VITAL CONTINUITY INDEX"
 	header.add_theme_font_size_override("font_size", 12)
-	header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	header.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 	outer.add_child(header)
 
 	var vci = _compute_vci(state)
@@ -90,7 +92,7 @@ func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 		var cat_label = Label.new()
 		cat_label.text = "%s -- %.0f" % [category_label, category["score"]]
 		cat_label.add_theme_font_size_override("font_size", 12)
-		cat_label.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+		cat_label.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 		cat_label.custom_minimum_size = Vector2(330, 0)
 		cat_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		outer.add_child(cat_label)
@@ -100,7 +102,7 @@ func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 			var suffix = "" if measure["tracked"] else "  (baseline -- not yet tracked)"
 			m_label.text = "   - %s: %.0f%s" % [measure["label"], measure["score"], suffix]
 			m_label.add_theme_font_size_override("font_size", 10)
-			var tracked_color = Color(0.75, 0.85, 0.95) if measure["tracked"] else Color(0.5, 0.53, 0.58)
+			var tracked_color = HudPanelTheme.body_color(light_theme) if measure["tracked"] else HudPanelTheme.muted_color(light_theme)
 			m_label.add_theme_color_override("font_color", tracked_color)
 			# autowrap alone does nothing without an explicit width to wrap
 			# within -- a Label's minimum size is otherwise however wide its
@@ -114,11 +116,10 @@ func _build_vci_panel(column: VBoxContainer, state: Dictionary) -> void:
 func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var panel = PanelContainer.new()
 	panel.theme = ThemeBootstrap.theme
-	panel.theme_type_variation = "GlassPanelFrame"
+	panel.theme_type_variation = HudPanelTheme.panel_variation(light_theme)
 	column.add_child(panel)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
-	panel.add_child(bg)
+	HudPanelTheme.add_background(panel, light_theme, Color(0.05, 0.08, 0.15, 0.35), 1.0)
 
 	var outer = VBoxContainer.new()
 	outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -128,7 +129,7 @@ func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var resources_header = Label.new()
 	resources_header.text = "COMMONS (raw banked resources)"
 	resources_header.add_theme_font_size_override("font_size", 12)
-	resources_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	resources_header.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 	outer.add_child(resources_header)
 
 	# One bullet per resource, not one big comma-joined/wrapped paragraph --
@@ -165,7 +166,7 @@ func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 			var pct = clamp(amount / float(VCITracker.TARGETS[key]) * 100.0, 0.0, 100.0)
 			row.add_theme_color_override("font_color", _supply_health_color(pct))
 		else:
-			row.add_theme_color_override("font_color", Color(0.8, 0.85, 0.9))
+			row.add_theme_color_override("font_color", HudPanelTheme.body_color(light_theme))
 		resources_vbox.add_child(row)
 	if resources.is_empty():
 		var empty_label = Label.new()
@@ -184,7 +185,7 @@ func _build_commons_panel(column: VBoxContainer, state: Dictionary) -> void:
 	var supply_header = Label.new()
 	supply_header.text = "CRITICAL SUPPLY CHAIN"
 	supply_header.add_theme_font_size_override("font_size", 12)
-	supply_header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	supply_header.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 	outer.add_child(supply_header)
 
 	for entry in VCITracker.critical_supply_health(state["resources"]):
@@ -216,15 +217,15 @@ func _supply_band_name(pct: float) -> String:
 
 func _supply_health_color(pct: float) -> Color:
 	if pct >= 80.0:
-		return Color(0.45, 0.85, 0.55)
+		return HudPanelTheme.good_color(light_theme)
 	elif pct >= 60.0:
-		return Color(0.6, 0.8, 0.95)
+		return HudPanelTheme.info_color(light_theme)
 	elif pct >= 40.0:
-		return Color(0.95, 0.75, 0.35)
+		return HudPanelTheme.warn_color(light_theme)
 	elif pct >= 20.0:
-		return Color(0.95, 0.55, 0.3)
+		return HudPanelTheme.high_risk_color(light_theme)
 	else:
-		return Color(0.95, 0.35, 0.35)
+		return HudPanelTheme.bad_color(light_theme)
 
 ## Feeds real banked-resource state (via vci_tracker.gd's mapping) into
 ## the VCI binding added to CURComplianceMonitor. The monitor here is a
@@ -252,13 +253,13 @@ func _compute_vci(state: Dictionary) -> Dictionary:
 func _band_color(band: int) -> Color:
 	match band:
 		CURComplianceMonitor.VCB_STABLE:
-			return Color(0.45, 0.85, 0.55)
+			return HudPanelTheme.good_color(light_theme)
 		CURComplianceMonitor.VCB_OBSERVATION:
-			return Color(0.6, 0.8, 0.95)
+			return HudPanelTheme.info_color(light_theme)
 		CURComplianceMonitor.VCB_ELEVATED:
-			return Color(0.95, 0.75, 0.35)
+			return HudPanelTheme.warn_color(light_theme)
 		CURComplianceMonitor.VCB_HIGH_RISK:
-			return Color(0.95, 0.55, 0.3)
+			return HudPanelTheme.high_risk_color(light_theme)
 		_:
-			return Color(0.95, 0.35, 0.35)
+			return HudPanelTheme.bad_color(light_theme)
 

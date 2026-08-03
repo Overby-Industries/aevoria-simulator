@@ -132,10 +132,24 @@ func _build_ui():
 
 	outer.add_child(HSeparator.new())
 
+	# Two destinations, not one -- Greenhouse Bay is a room inside the
+	# Hangar Deck, not a direct child of Level Select, so "back" is
+	# ambiguous without both options (see main_hangar_deck.gd).
+	var nav_row = HBoxContainer.new()
+	nav_row.add_theme_constant_override("separation", 6)
+	outer.add_child(nav_row)
+
+	var hangar_button = Button.new()
+	hangar_button.text = "Back to Hangar Deck"
+	hangar_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hangar_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/MainHangarDeck.tscn"))
+	nav_row.add_child(hangar_button)
+
 	var back_button = Button.new()
 	back_button.text = "Back to Level Select"
+	back_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/LevelSelect.tscn"))
-	outer.add_child(back_button)
+	nav_row.add_child(back_button)
 
 func _make_glass_background(tint: Color) -> ColorRect:
 	var bg = ColorRect.new()
@@ -157,6 +171,7 @@ func _refresh():
 	_resources_label.text = "Commons -- H2O: %.1f   Food: %.1f\nHarvested this visit: %.1f Food" % [h2o, food, _harvested_this_session]
 	for button in _bay_buttons:
 		button.disabled = h2o < H2O_COST
+		button.tooltip_text = "" if h2o >= H2O_COST else "Need %.1f H2O banked (have %.1f)." % [H2O_COST, h2o]
 
 func _on_harvest_pressed():
 	var ok = FactionHomeBase.spend_resource(LevelContext.current_faction_id, "H2O", H2O_COST)

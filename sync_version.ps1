@@ -72,14 +72,14 @@ if ($BuildNumber -gt 0) {
         "`${1}$Version`$2" `
         "web/package-lock.json"
 
-    # aevoria-simulator/export_presets.cfg: Windows exe file/product version
+    # godot/export_presets.cfg: Windows exe file/product version
     # metadata (shows up in the .exe's Properties > Details tab in Explorer).
     # file_version wants the traditional 4-part Windows form.
-    Update-InFile "aevoria-simulator/export_presets.cfg" `
+    Update-InFile "godot/export_presets.cfg" `
         'application/file_version="[^"]*"' `
         "application/file_version=`"$Version.0`"" `
         "export_presets.cfg (file_version)"
-    Update-InFile "aevoria-simulator/export_presets.cfg" `
+    Update-InFile "godot/export_presets.cfg" `
         'application/product_version="[^"]*"' `
         "application/product_version=`"$Version`"" `
         "export_presets.cfg (product_version)"

@@ -26,12 +26,6 @@ PlayerProfile="*res://scripts/player_profile.gd"
 
 [display]
 
-; Fullscreen (borderless, not exclusive -- better alt-tab/multi-monitor
-; behavior) by default: the fixed-position corner HUD panels overlap each
-; other at small windowed sizes, and most players' first launch shouldn't
-; require them to manually maximize. window_controls.gd (autoload) gives
-; players a way out via F11, since always-fullscreen-with-no-toggle would
-; trap anyone who wants windowed mode.
 window/size/mode=3
 
 [physics]

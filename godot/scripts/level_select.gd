@@ -173,6 +173,7 @@ func _build_faction_row() -> HBoxContainer:
 		button.theme_type_variation = "GlassButton"
 		button.add_theme_font_size_override("font_size", 10)
 		button.disabled = faction_id_option == _faction_id
+		button.tooltip_text = "You're already viewing the %s roster." % LevelCatalog.faction_label(faction_id_option) if button.disabled else ""
 		var faction_id = faction_id_option
 		button.pressed.connect(func():
 			LevelContext.faction_override = faction_id

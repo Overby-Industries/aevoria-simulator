@@ -13,6 +13,7 @@ extends Node3D
 
 const Starfield = preload("res://scripts/starfield.gd")
 const SpaceEnvironment = preload("res://scripts/space_environment.gd")
+const AnamorphicStreak = preload("res://scripts/anamorphic_streak.gd")
 
 const COLOR_HULL = Color("1c2a45")
 const COLOR_AMBER = Color("ff9f1c")
@@ -54,13 +55,14 @@ const FLARE_SPECS = [
 
 # Anamorphic streaks -- the horizontal blue bars an anamorphic lens
 # produces (Star Trek/Interstellar-style), as opposed to FLARE_SPECS'
-# round ghosts. These use their OWN texture (_make_streak_texture, built
-# in _build_lens_flare) -- NOT the round radial one FLARE_SPECS uses.
-# Stretching a circular gradient into a wide short rect gives an ellipse
-# (an oval), never a flat-sided rectangle, no matter what width/height you
-# pick -- that was the original bug here. _make_streak_texture instead
-# bakes a shape that's soft top-to-bottom AND tapers to a point at the
-# left/right ends (see its comment for how) -- keep alpha modest here
+# round ghosts. These use their OWN texture (AnamorphicStreak.make_texture(),
+# built in _build_lens_flare -- shared with hangar_backdrop.gd's ceiling
+# fixtures) -- NOT the round radial one FLARE_SPECS uses. Stretching a
+# circular gradient into a wide short rect gives an ellipse (an oval),
+# never a flat-sided rectangle, no matter what width/height you pick --
+# that was the original bug here. anamorphic_streak.gd instead bakes a
+# shape that's soft top-to-bottom and tapers to a point at the left/right
+# ends (see that file's comment for how) -- keep alpha modest here
 # (0.1-0.5ish): unlike the old texture, this one is fully solid across
 # most of its width with no horizontal falloff to dilute it, so the same
 # alpha reads noticeably brighter than it did on the old texture. Too
@@ -177,7 +179,7 @@ func _hull_material() -> StandardMaterial3D:
 
 func _build_lens_flare() -> void:
 	_flare_texture = _make_radial_texture()
-	_streak_texture = _make_streak_texture()
+	_streak_texture = AnamorphicStreak.make_texture()
 
 	var flare_layer := CanvasLayer.new()
 	# Below every UI panel's default layer (1) so glass panels still sit
@@ -233,54 +235,6 @@ func _make_radial_texture() -> GradientTexture2D:
 	tex.fill_from = Vector2(0.5, 0.5)
 	tex.fill_to = Vector2(1.0, 0.5)
 	return tex
-
-# For STREAK_SPECS. GradientTexture2D can only fade along ONE axis at a
-# time (its "fill" is either radial -- fades every direction, an oval when
-# stretched -- or linear along one line -- flat/solid ends, no taper), so
-# getting a shape that's soft top-to-bottom AND tapers to a point at the
-# left/right ends needs both axes to fade independently. That's baked by
-# hand into a plain Image instead: alpha at each pixel is
-# `vertical_falloff(y) * horizontal_taper(x)`, i.e. two independent 1D
-# falloffs multiplied together, which GradientTexture2D alone can't express.
-const STREAK_TEX_SIZE := Vector2i(256, 32)
-# Fraction of the texture's width, on EACH side, spent tapering down to a
-# point -- e.g. 0.3 means the outer 30% on the left and outer 30% on the
-# right both ramp to zero, leaving a solid 40% in the middle. Bigger
-# = more needle-like tips; smaller = blunter, more rectangular ends.
-const STREAK_TAPER_FRACTION := 0.32
-
-func _make_streak_texture() -> ImageTexture:
-	var w := STREAK_TEX_SIZE.x
-	var h := STREAK_TEX_SIZE.y
-	var img := Image.create_empty(w, h, false, Image.FORMAT_RGBA8)
-	for x in range(w):
-		var u := float(x) / float(w - 1)  # 0 at left edge, 1 at right edge
-		var h_alpha := _streak_horizontal_taper(u)
-		for y in range(h):
-			var v := float(y) / float(h - 1)  # 0 at top, 1 at bottom
-			var v_alpha := _streak_vertical_falloff(v)
-			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, h_alpha * v_alpha))
-	return ImageTexture.create_from_image(img)
-
-# 1 across the solid middle, smoothstep-ramping to 0 at both ends over the
-# outer STREAK_TAPER_FRACTION -- this is what puts an actual point on each
-# tip instead of a hard flat cutoff.
-static func _streak_horizontal_taper(u: float) -> float:
-	var a := 1.0
-	if u < STREAK_TAPER_FRACTION:
-		a = u / STREAK_TAPER_FRACTION
-	elif u > 1.0 - STREAK_TAPER_FRACTION:
-		a = (1.0 - u) / STREAK_TAPER_FRACTION
-	a = clampf(a, 0.0, 1.0)
-	return a * a * (3.0 - 2.0 * a)  # smoothstep, avoids a visible crease at the taper start
-
-# Brightest at the vertical center (v = 0.5), fading to 0 at top/bottom --
-# squared so the line reads tight/bright in the middle rather than a broad
-# smear, same spirit as the old radial texture's falloff.
-static func _streak_vertical_falloff(v: float) -> float:
-	var d := absf(v - 0.5) * 2.0  # 0 at center, 1 at top/bottom edge
-	var a := clampf(1.0 - d, 0.0, 1.0)
-	return a * a
 
 func _update_lens_flare() -> void:
 	if _camera == null or _flare_sprites.is_empty():

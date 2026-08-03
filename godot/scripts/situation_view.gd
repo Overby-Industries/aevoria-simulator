@@ -463,6 +463,19 @@ static func _can_afford(resources: Dictionary, cost: Dictionary) -> bool:
 			return false
 	return true
 
+## "have/need" for whichever cost lines are actually short -- feeds the
+## tooltip on every disabled cost-gated button below, so hovering a grayed-
+## out button (rather than just seeing it's unclickable) tells you exactly
+## what to go bank more of.
+static func _missing_resources_text(resources: Dictionary, cost: Dictionary) -> String:
+	var parts: Array = []
+	for resource_name in cost.keys():
+		var have = float(resources.get(resource_name, 0.0))
+		var need = float(cost[resource_name])
+		if have < need:
+			parts.append("%s %.1f/%.1f" % [resource_name, have, need])
+	return ", ".join(parts)
+
 func _refresh_detail_panel() -> void:
 	_enter_button.visible = false
 	_expand_button.visible = false
@@ -481,6 +494,7 @@ func _refresh_detail_panel() -> void:
 		_detail_label.text = "%s is unclaimed. Building a station here costs: %s." % [_selected_sector_id, ", ".join(cost_lines)]
 		_expand_button.text = "Expand Here" if affordable else "Expand Here (insufficient resources)"
 		_expand_button.disabled = not affordable
+		_expand_button.tooltip_text = "" if affordable else "Missing (have/need): %s" % _missing_resources_text(state["resources"], EXPANSION_COST)
 		_expand_button.visible = true
 	else:
 		_detail_label.text = "%s -- %s\nOwned by %s. Biological pop %d, Silicon-Based pop %d." % [_selected_sector_id, claim["station_name"], LevelCatalog.faction_label(claim["faction_id"]), int(claim["population_biological"]), int(claim["population_silicon"])]
@@ -508,11 +522,21 @@ func _refresh_civil_panel() -> void:
 	_civil_label.text = "\n".join(lines)
 	_civil_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.5) if short else Color(0.75, 0.85, 0.95))
 	_run_cycle_button.disabled = short
+	_run_cycle_button.tooltip_text = "" if not short else "Missing (have/need): %s" % _missing_resources_text(state["resources"], cost)
 
 	var selected_claim = _claims.get(_selected_sector_id)
 	var owns_selected = selected_claim != null and selected_claim["faction_id"] == faction_id
-	_grow_bio_button.disabled = not (owns_selected and _can_afford(state["resources"], {"Food": GROW_BIO_FOOD_COST, "Potable Water": GROW_BIO_WATER_COST}))
-	_grow_silicon_button.disabled = not (owns_selected and _can_afford(state["resources"], {"Steel": GROW_SILICON_STEEL_COST}))
+	var bio_cost = {"Food": GROW_BIO_FOOD_COST, "Potable Water": GROW_BIO_WATER_COST}
+	var silicon_cost = {"Steel": GROW_SILICON_STEEL_COST}
+	_grow_bio_button.disabled = not (owns_selected and _can_afford(state["resources"], bio_cost))
+	_grow_silicon_button.disabled = not (owns_selected and _can_afford(state["resources"], silicon_cost))
+	if not owns_selected:
+		var no_station_hint = "Select a station your faction owns first."
+		_grow_bio_button.tooltip_text = no_station_hint
+		_grow_silicon_button.tooltip_text = no_station_hint
+	else:
+		_grow_bio_button.tooltip_text = "" if not _grow_bio_button.disabled else "Missing (have/need): %s" % _missing_resources_text(state["resources"], bio_cost)
+		_grow_silicon_button.tooltip_text = "" if not _grow_silicon_button.disabled else "Missing (have/need): %s" % _missing_resources_text(state["resources"], silicon_cost)
 
 func _on_expand_pressed() -> void:
 	if _selected_sector_id == "" or _claims.has(_selected_sector_id):

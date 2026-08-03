@@ -30,11 +30,31 @@ const VCICommonsPanel = preload("res://scripts/vci_commons_panel.gd")
 const CycleStatusPanel = preload("res://scripts/cycle_status_panel.gd")
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 
+## Set before add_child() -- see founders_monument.gd's embedded_mode for
+## the same pattern. Opts every panel below into the opaque white
+## AevoriaPanel look (hud_panel_theme.gd) instead of the default dark
+## frosted glass -- for a level whose own 3D backdrop is bright (Main
+## Hangar Deck), the glass panels' light-on-dark text would otherwise
+## wash out against it.
+var light_theme: bool = false
+
 func _ready() -> void:
 	var faction_id = LevelContext.current_faction_id
 	if faction_id == "":
 		faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
-	add_child(AccountPanel.new())
-	add_child(ConsoleLogPanel.new())
-	add_child(VCICommonsPanel.new(faction_id))
-	add_child(CycleStatusPanel.new(faction_id))
+
+	var account = AccountPanel.new()
+	account.light_theme = light_theme
+	add_child(account)
+
+	var console = ConsoleLogPanel.new()
+	console.light_theme = light_theme
+	add_child(console)
+
+	var vci = VCICommonsPanel.new(faction_id)
+	vci.light_theme = light_theme
+	add_child(vci)
+
+	var cycle = CycleStatusPanel.new(faction_id)
+	cycle.light_theme = light_theme
+	add_child(cycle)

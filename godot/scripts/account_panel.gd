@@ -11,11 +11,10 @@ extends CanvasLayer
 ## _badge_detail_label) so this panel only shows identity (email + badge)
 ## and the ship-name readout, not a second copy of the same inventory.
 
-const GlassPanel = preload("res://scripts/glass_panel.gd")
+const HudPanelTheme = preload("res://scripts/hud_panel_theme.gd")
 
-## Gold, matching the badge color assembly_bay.gd's own _badge_label uses --
-## kept as one constant so the two panels can't drift apart.
-const BADGE_COLOR = Color(0.95, 0.82, 0.4)
+## Set before add_child() -- see level_chrome.gd's matching flag.
+var light_theme: bool = false
 
 var _panel: PanelContainer
 var _logged_out_box: VBoxContainer
@@ -60,10 +59,9 @@ func _build_ui():
 	# up-and-left from the anchor. Force it explicitly.
 	_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_panel.theme_type_variation = "GlassPanelFrame"
+	_panel.theme_type_variation = HudPanelTheme.panel_variation(light_theme)
 
-	var bg = GlassPanel.make(Color(0.05, 0.08, 0.15, 0.35), 1.0)
-	_panel.add_child(bg)
+	HudPanelTheme.add_background(_panel, light_theme, Color(0.05, 0.08, 0.15, 0.35), 1.0)
 
 	# Used to cap this panel's height with an internal scroll when it also
 	# carried Ship Name / Badges & Perks / Inventory content, tall enough to
@@ -77,12 +75,12 @@ func _build_ui():
 
 	var header = Label.new()
 	header.text = "COMMONWEALTH ACCOUNT"
-	header.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0))
+	header.add_theme_color_override("font_color", HudPanelTheme.header_color(light_theme))
 	outer.add_child(header)
 
 	_status_label = Label.new()
 	_status_label.add_theme_font_size_override("font_size", 11)
-	_status_label.add_theme_color_override("font_color", Color(0.95, 0.6, 0.5))
+	_status_label.add_theme_color_override("font_color", HudPanelTheme.bad_color(light_theme))
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	outer.add_child(_status_label)
 
@@ -101,7 +99,7 @@ func _build_ui():
 
 	var login_button = Button.new()
 	login_button.text = "Log In"
-	login_button.theme_type_variation = "GlassButton"
+	login_button.theme_type_variation = HudPanelTheme.button_variation(light_theme)
 	login_button.pressed.connect(_on_login_pressed)
 	_logged_out_box.add_child(login_button)
 
@@ -114,6 +112,7 @@ func _build_ui():
 
 	_account_label = Label.new()
 	_account_label.add_theme_font_size_override("font_size", 12)
+	_account_label.add_theme_color_override("font_color", HudPanelTheme.body_color(light_theme))
 	account_row.add_child(_account_label)
 
 	# Separate Label (not baked into _account_label's own text) so the
@@ -121,7 +120,7 @@ func _build_ui():
 	# color -- a single Label can't mix font colors mid-string.
 	_account_badge_label = Label.new()
 	_account_badge_label.add_theme_font_size_override("font_size", 12)
-	_account_badge_label.add_theme_color_override("font_color", BADGE_COLOR)
+	_account_badge_label.add_theme_color_override("font_color", HudPanelTheme.badge_color(light_theme))
 	account_row.add_child(_account_badge_label)
 
 	# Read-only here -- the ship's actual name is set in the Assembly Bay's
@@ -130,14 +129,14 @@ func _build_ui():
 	# account panel too, on every level (level_chrome.gd), not just there.
 	_ship_name_label = Label.new()
 	_ship_name_label.add_theme_font_size_override("font_size", 11)
-	_ship_name_label.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95))
+	_ship_name_label.add_theme_color_override("font_color", HudPanelTheme.body_color(light_theme))
 	_logged_in_box.add_child(_ship_name_label)
 
 	_logged_in_box.add_child(HSeparator.new())
 
 	var logout_button = Button.new()
 	logout_button.text = "Log Out"
-	logout_button.theme_type_variation = "GlassButton"
+	logout_button.theme_type_variation = HudPanelTheme.button_variation(light_theme)
 	logout_button.pressed.connect(AevoriaAuth.logout)
 	_logged_in_box.add_child(logout_button)
 
@@ -146,7 +145,7 @@ func _build_ui():
 	outer.add_child(HSeparator.new())
 	var exit_button = Button.new()
 	exit_button.text = "Exit Game"
-	exit_button.theme_type_variation = "GlassButton"
+	exit_button.theme_type_variation = HudPanelTheme.button_variation(light_theme)
 	exit_button.pressed.connect(func(): get_tree().quit())
 	outer.add_child(exit_button)
 

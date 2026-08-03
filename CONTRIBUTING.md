@@ -13,7 +13,7 @@ front door) and what's real vs. placeholder in it today, see
 ## Project layout
 
 ```
-aevoria-simulator/     Godot 4 project (scenes, GDScript, shaders)
+godot/                 Godot 4 project (scenes, GDScript, shaders)
   scenes/               .tscn scene files -- one per level, plus shared HUD scenes
   scripts/              GDScript -- level logic, catalogs, UI
   shaders/              .gdshader files (e.g. the frosted-glass panel background)
@@ -25,7 +25,7 @@ web/                   Next.js companion app (account system, skin marketplace, 
 docs/                  Deeper reference docs (this file is the index/entry point)
 ```
 
-Most levels are **pure GDScript** (`aevoria-simulator/scripts/*.gd`) and need no
+Most levels are **pure GDScript** (`godot/scripts/*.gd`) and need no
 C++ rebuild at all to edit. The C++ layer (`src/`) exists for things GDScript
 can't do on its own: the CUR compliance state machine bridge, and the
 kit-bashing parts system (`PartDefinition`/`PartAssembler`) that ships,
@@ -34,7 +34,7 @@ droids, and habitat modules are built from.
 ## Setting up your environment
 
 - **Godot 4.6.3** (stable) — the exact editor/runtime this project targets
-  (`aevoria-simulator/project.godot` pins `config/features` to `"4.6"`). Using
+  (`godot/project.godot` pins `config/features` to `"4.6"`). Using
   a different 4.x version will often still open the project, but a version
   mismatch is the first thing to suspect if something that should work
   doesn't.
@@ -60,23 +60,23 @@ python -m SCons platform=windows target=template_release -j4
 ```
 
 This compiles everything under `src/` and `cur/src/` into
-`aevoria-simulator/bin/libaevoria.windows.template_{debug,release}.x86_64.dll`.
+`godot/bin/libaevoria.windows.template_{debug,release}.x86_64.dll`.
 Build the **debug** target for day-to-day editor/dev-server use; build
 **release** too before exporting a distributable build (see below) — Godot's
 export step needs the release DLL and will silently produce a broken
 export if it's missing or stale.
 
 You only need to run SCons after changing a file under `src/` (or pulling a
-`cur` submodule update). Editing anything under `aevoria-simulator/scripts/`
-or `aevoria-simulator/scenes/` is pure GDScript/scene-file data — no build
+`cur` submodule update). Editing anything under `godot/scripts/`
+or `godot/scenes/` is pure GDScript/scene-file data — no build
 step, just relaunch (or hot-reload in the editor).
 
 ## Running the project
 
-Open `aevoria-simulator/` in the Godot 4.6.3 editor, or launch it directly:
+Open `godot/` in the Godot 4.6.3 editor, or launch it directly:
 
 ```bash
-"<path to godot>/Godot_v4.6.3-stable_win64_console.exe" --path aevoria-simulator
+"<path to godot>/Godot_v4.6.3-stable_win64_console.exe" --path godot
 ```
 
 The `_console.exe` variant is worth using over the plain `.exe` even for a
@@ -88,7 +88,7 @@ show up.
 and boot" check after an edit):
 
 ```bash
-"<godot>/Godot_v4.6.3-stable_win64_console.exe" --headless --path aevoria-simulator res://scenes/<SceneName>.tscn --quit-after 60
+"<godot>/Godot_v4.6.3-stable_win64_console.exe" --headless --path godot res://scenes/<SceneName>.tscn --quit-after 60
 ```
 
 This boots straight into the named scene and exits after 60 frames. It
@@ -100,7 +100,7 @@ For anything visual, you have to actually launch it windowed and look.
 ## Where levels live and how they're wired up
 
 Every level is one `.tscn` scene + one matching GDScript in
-`aevoria-simulator/scripts/`, listed in `scripts/level_catalog.gd`
+`godot/scripts/`, listed in `scripts/level_catalog.gd`
 (`build_levels()` returns the array `level_select.gd` renders as cards). To
 add a new level:
 
@@ -126,15 +126,18 @@ faction's one or two dedicated levels (`oligarch_boardroom.gd`,
 `part_catalog.gd` — adding more of either faction's own levels is the
 open work, not adding the switcher itself.
 
-**Known gap, deliberately deferred:** most levels are still a plain gray
+**Known gap, partially addressed:** most levels are still a plain gray
 background with a camera/light and a UI panel — no real 3D scene dressing.
-The plan (as of 2026-07-29) is to flesh out VCI tracking first (see
+Level Select (`hero_backdrop.gd`/`starfield.gd`) and Main Hangar Deck
+(`hangar_backdrop.gd`) now have real dressing; the production bays,
+governance levels, and the situation tables/view still don't. The plan (as
+of 2026-07-29) is to flesh out VCI tracking first (see
 [docs/VCI_TRACKING.md](docs/VCI_TRACKING.md)) so there's a real objective
-system to build longer, multi-level campaigns against, and to give each
-level a proper 3D scene as part of that campaign work rather than as a
-separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd` (see
-[docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s "System 4") are the
-reusable pieces this would build on when the time comes.
+system to build longer, multi-level campaigns against, and to give the
+remaining levels a proper 3D scene as part of that campaign work rather
+than as a separate cosmetic pass. `hero_backdrop.gd`/`starfield.gd`/
+`hangar_backdrop.gd` (see [docs/GRAPHICS_GUIDE.md](docs/GRAPHICS_GUIDE.md)'s
+"System 4") are the reusable pieces this would build on when the time comes.
 5. If the level's UI panel might grow past a few items, wrap it in a
    `ScrollContainer` from the start (see any level's `_build_ui()`) — this bit
    the project twice already (`AssemblyBay`, then `LevelSelect` itself) once a
@@ -151,8 +154,8 @@ genuinely new *shape* (not just new numbers for an existing shape) touches
 
 ## Exporting and deploying
 
-`aevoria-simulator/export_presets.cfg` defines the "Windows Desktop" export
-preset. `aevoria-simulator/deploy_to_itch.ps1` does the full release cycle in
+`godot/export_presets.cfg` defines the "Windows Desktop" export
+preset. `godot/deploy_to_itch.ps1` does the full release cycle in
 one command: exports a release build, then pushes it to itch.io via
 `butler` (incremental patches only — fast after the first push).
 
@@ -173,7 +176,7 @@ forget this last step (players still get whatever the last deploy shipped).
    in.
 2. Run the deploy script from the repo root:
    ```powershell
-   powershell -File aevoria-simulator/deploy_to_itch.ps1
+   powershell -File godot/deploy_to_itch.ps1
    ```
    This exports a fresh "Windows Desktop" release build via Godot's headless
    `--export-release`, then pushes it to the `windows` channel via
@@ -207,7 +210,7 @@ once (credentials cached at `~/.config/itch/butler_creds`).
 - **Godot opens but the DLL/classes aren't there (`CURComplianceMonitor`,
   `PartDefinition`, etc. unknown)** — the GDExtension didn't build, or built
   for the wrong target. Rebuild `template_debug` and check
-  `aevoria-simulator/bin/` for a DLL with today's timestamp.
+  `godot/bin/` for a DLL with today's timestamp.
 - **A level "looks blank" after Launch** — almost always a layout bug (a
   panel positioned assuming a bigger window than you actually have), not a
   broken scene transition. Launch windowed and actually look; headless mode

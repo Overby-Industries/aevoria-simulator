@@ -25,7 +25,7 @@ Godot (or hot-reload in the editor).
 
 Used for anything built through the Assembly Bay's kit-bashing system —
 hulls, thrusters, drill arms, habitat rings, and so on
-(`aevoria-simulator/scripts/part_catalog.gd` is the catalog; `src/part_definition.{h,cpp}`
+(`godot/scripts/part_catalog.gd` is the catalog; `src/part_definition.{h,cpp}`
 is the C++ that turns a `mesh_recipe` dictionary into an actual mesh).
 
 ### Existing shapes and their `mesh_recipe` keys
@@ -78,7 +78,7 @@ tiny part will visibly throw off the framing rather than silently working.
 
 ### Where the actual ship definitions live
 
-`aevoria-simulator/scripts/part_catalog.gd`, `build_demo_catalog()`. Each
+`godot/scripts/part_catalog.gd`, `build_demo_catalog()`. Each
 part is a `PartDefinition` with `mesh_recipe` (shape, above), `sockets`
 (named attachment points other parts plug into), `stats` (mass/cargo/etc.,
 summed by `PartAssembler`), and `faction_id` (empty = every faction can build
@@ -121,7 +121,7 @@ normal path unless you have a specific reason not to.
 
 Used for anything that's just scene dressing — asteroid/comet nodes, grow
 bay racks, furnaces, electrolysis tanks, room furniture. This is
-`aevoria-simulator/scripts/simple_shapes.gd` — no sockets, no stats, no C++,
+`godot/scripts/simple_shapes.gd` — no sockets, no stats, no C++,
 **never needs a rebuild**, because it's just a thin GDScript wrapper around
 Godot's own primitive mesh classes.
 
@@ -163,7 +163,7 @@ add_child(light)
 
 ### Worked example: the desk in Greenhouse Bay
 
-`aevoria-simulator/scripts/greenhouse_bay.gd`'s `_spawn_desk()` is a real,
+`godot/scripts/greenhouse_bay.gd`'s `_spawn_desk()` is a real,
 currently-in-the-game example of exactly this — a plain two-box desk
 (tabletop + support block), called once from `_ready()`. Open that function
 as your starting template for adding any other static room furniture (a
@@ -286,6 +286,28 @@ This is the part worth understanding in detail if you want to tune it:
 ```gdscript
 {"t": 2.0, "scale": 0.2, "color": Color(0.8, 0.5, 1.0, 0.15)}
 ```
+
+### A second worked example: Main Hangar Deck's interior
+
+`hangar_backdrop.gd` (instantiated from `main_hangar_deck.gd`'s `_ready()`,
+same one-line pattern as `HeroBackdrop`) is the interior counterpart —
+floor, back wall, entrance archway, ceiling truss, pillars, all built from
+the exact same primitives as System 2 above (it calls
+`SimpleShapes.make_mesh_instance()`/`make_point_light()` throughout, it
+just also adds its own `WorldEnvironment` and a couple of extra lights the
+way `hero_backdrop.gd` does). It's also the one level whose shared HUD
+panels (System 5's `GlassPanelFrame`/`GlassButton`) render as opaque white
+`AevoriaPanel`/`AevoriaButton` instead — see `level_chrome.gd`'s
+`light_theme` flag and `hud_panel_theme.gd`, which is what makes a
+genuinely bright backdrop here viable without washing those panels out. If
+you want a similar
+interior for another level, this is a closer starting template than
+`hero_backdrop.gd` itself — it's dressing a room with a fixed camera
+looking into it, not an exterior space scene with a rotating hull
+silhouette. Every position in it is hand-placed against
+`MainHangarDeck.tscn`'s specific camera transform (see the file's own top
+comment for the exact numbers), same "camera never moves, geometry is
+placed to fit it" approach as `SUN_POSITION` above.
 
 ## System 5: The glass/amber UI theme
 
