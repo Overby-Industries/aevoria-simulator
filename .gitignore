@@ -45,7 +45,6 @@ Thumbs.db
 *.TMP
 
 
-godot/
 *.exe
 *.x86_64
 *.a

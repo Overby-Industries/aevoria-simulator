@@ -24,6 +24,7 @@ extends Node
 
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const OligarchBoardroomBackdrop = preload("res://scripts/oligarch_boardroom_backdrop.gd")
 
 # CaptureRiskInputs defaults (cur_capture_index.h): iii/dpi/thi start at
 # 100 (higher is better), eci/ici/rdi start at 0 (higher is worse). Each
@@ -96,6 +97,7 @@ var _back_button: Button
 
 func _ready():
 	add_child(LevelChrome.new())
+	add_child(OligarchBoardroomBackdrop.new())
 	hud.set_monitor(monitor)
 	_combine = monitor.register_entity("oligarch-combine-holdings", monitor.EC_ECONOMIC, monitor.SUBJ_OPERATIONAL_LICENSE)
 	_build_ui()

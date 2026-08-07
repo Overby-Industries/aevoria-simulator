@@ -64,7 +64,14 @@ var _zoom_out_button: Button
 
 func _ready():
 	add_child(LevelChrome.new())
-	add_child(SpaceEnvironment.build())
+	var faction_id = LevelContext.current_faction_id
+	if faction_id == "":
+		faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
+	var accent: Color = FactionVisuals.backdrop_palette(faction_id)["accent"]
+	add_child(_build_environment(accent))
+	var accent_light = SimpleShapes.make_point_light(accent, 0.2, 30.0)
+	accent_light.position = Vector3(0, -4, -10)
+	add_child(accent_light)
 	Starfield.spawn(self)
 	_nodes = ResourceNodeCatalog.build_field(6, 4, 3, 3)
 	for node_data in _nodes:
@@ -76,6 +83,18 @@ func _ready():
 
 	_build_ui()
 	_refresh_list()
+
+## Same near-black backdrop as SpaceEnvironment.build(), tinted just enough
+## to read as "whose operation this is" -- the table itself (asteroids,
+## comets, labels) stays identical across factions per the docstring
+## above; only the ambient mood shifts. Kept restrained (15% blend) so the
+## near-black background and node emissives don't lose their readability
+## the way a full faction repaint would.
+func _build_environment(accent: Color) -> WorldEnvironment:
+	var world_env := SpaceEnvironment.build()
+	var env := world_env.environment
+	env.ambient_light_color = env.ambient_light_color.lerp(accent, 0.15)
+	return world_env
 
 func _flat(position: Vector3) -> Vector3:
 	# Table display flattens the field's small Y jitter (see

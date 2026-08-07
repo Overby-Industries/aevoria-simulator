@@ -41,17 +41,28 @@ const CARD_ACCENT_COLORS = [
 @onready var camera: Camera3D = $Camera3D
 
 func _ready():
-	add_child(HangarBackdrop.new())
+	# Falls back to the Commonwealth if this scene is opened directly
+	# (editor "Run Current Scene", or a headless smoke test) and
+	# current_faction_id is still "" -- same fallback level_chrome.gd
+	# already uses for its own faction-aware panels.
+	var faction_id = LevelContext.current_faction_id
+	if faction_id == "":
+		faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
+
+	add_child(HangarBackdrop.new(faction_id))
 	# Opaque white cards read fine against a bright hangar; the shared
 	# glass HUD panels don't (see level_chrome.gd's light_theme comment) --
-	# this is what makes the bright backdrop below viable again.
+	# this is what makes the bright backdrop below viable again. (Combine/
+	# Flotilla's darker HangarBackdrop moods still use the light_theme
+	# chrome/cards -- only the 3D backdrop behind them varies per faction,
+	# see hangar_backdrop.gd.)
 	var chrome = LevelChrome.new()
 	chrome.light_theme = true
 	add_child(chrome)
 	camera.make_current()
-	_build_ui()
+	_build_ui(faction_id)
 
-func _build_ui() -> void:
+func _build_ui(faction_id: String) -> void:
 	var canvas = CanvasLayer.new()
 	add_child(canvas)
 
@@ -67,7 +78,6 @@ func _build_ui() -> void:
 	outer.add_theme_constant_override("separation", 10)
 	panel.add_child(outer)
 
-	var faction_id = LevelContext.current_faction_id
 	var header = Label.new()
 	header.text = LevelCatalog.hangar_deck_label(faction_id).to_upper()
 	header.add_theme_font_size_override("font_size", 16)

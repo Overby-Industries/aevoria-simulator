@@ -32,3 +32,50 @@ static func territory_color(faction_id: String) -> Color:
 			return Color("2fd9c4")
 		_:
 			return Color("3d7bff")
+
+## Shared room/interior mood per faction, for any level backdrop built with
+## a fixed camera looking into a space (hangar_backdrop.gd's approach,
+## docs/GRAPHICS_GUIDE.md's "System 2" worked example) -- not just the
+## tactical-table markers above. One canonical palette so every faction-
+## aware backdrop across the game (governance chambers, the Combine
+## boardroom, the Flotilla's drift ship, the shared hangar/bay interiors)
+## reads as the same three factions instead of each level script picking
+## its own hex colors. See docs/FACTIONS.md for the reasoning behind each
+## look:
+##   - Commonwealth: chartered, orderly, CUR-compliant -- clean and bright
+##     (the existing white/gold hangar interior is this faction's look).
+##   - Combine: corporate-captured sovereignty, concentrated capital --
+##     dark, gilded, opulent rather than clean; wealth without the
+##     Commonwealth's institutional openness.
+##   - Flotilla: nomadic, no home base, outside both governments' reach --
+##     scavenged/patchwork, warm rust and worn metal, not gleaming.
+## Keys: accent (the same hue as territory_color, for trim/UI/emissive
+## highlights), wall/floor (base structural surface colors), light (the
+## interior's key-light color), fog (a near-black WorldEnvironment
+## background for any scene that also needs a window/gap out to space).
+static func backdrop_palette(faction_id: String) -> Dictionary:
+	match faction_id:
+		LevelCatalog.OLIGARCH_COMBINE:
+			return {
+				"accent": Color("ffb020"),
+				"wall": Color("2a241a"),
+				"floor": Color("1c1712"),
+				"light": Color(1.0, 0.85, 0.6),
+				"fog": Color(0.014, 0.01, 0.004),
+			}
+		LevelCatalog.NOMAD_FLOTILLA:
+			return {
+				"accent": Color("2fd9c4"),
+				"wall": Color("3a352e"),
+				"floor": Color("2a2620"),
+				"light": Color(0.85, 0.95, 0.9),
+				"fog": Color(0.006, 0.009, 0.009),
+			}
+		_:
+			return {
+				"accent": Color("3d7bff"),
+				"wall": Color("eceef1"),
+				"floor": Color("eceef1"),
+				"light": Color(1.0, 0.98, 0.94),
+				"fog": Color(0.006, 0.007, 0.012),
+			}

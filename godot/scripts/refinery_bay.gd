@@ -13,6 +13,8 @@ extends Node3D
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const FactionVisuals = preload("res://scripts/faction_visuals.gd")
+const LevelCatalog = preload("res://scripts/level_catalog.gd")
 
 const RECIPES = [
 	{"name": "Smelt Gold", "input_resource": "PGM", "input_amount": 15.0, "output_resource": "Gold", "output_amount": 5.0, "glow": Color("ffd54a")},
@@ -22,6 +24,22 @@ const RECIPES = [
 	{"name": "Press Shield Plating", "input_resource": "Regolith", "input_amount": 20.0, "output_resource": "Shield Plating", "output_amount": 8.0, "glow": Color("8fd6e6")},
 ]
 
+## Smelting-floor shell around the furnaces below -- floor, back/side walls,
+## and a couple of overhead duct silhouettes (docs/GRAPHICS_GUIDE.md System
+## 2, same SimpleShapes-plus-own-WorldEnvironment technique as
+## hangar_backdrop.gd, far simpler since RefineryBay.tscn's Camera3D is
+## fixed -- see hangar_backdrop.gd's own doc comment on "camera never
+## moves, geometry is placed to fit it"). _spawn_furnace() below places
+## furnaces at x = (index - 1) * 3.2 for indices 0..4 (RECIPES.size()),
+## i.e. x in [-3.2, 9.6] -- FLOOR_HALF_WIDTH/FLOOR_DEPTH_NEAR/FAR give a
+## floor comfortably larger than that span, not a tight fit.
+const FLOOR_HALF_WIDTH := 13.0
+const FLOOR_DEPTH_NEAR := 16.0    # toward the camera (Camera3D sits at z=14)
+const FLOOR_DEPTH_FAR := -12.0    # the back wall
+const WALL_HEIGHT := 8.0
+const DUCT_HEIGHT := WALL_HEIGHT - 1.2
+const DUCT_RADIUS := 0.35
+
 @onready var camera: Camera3D = $Camera3D
 
 var _resources_label: Label
@@ -30,11 +48,88 @@ var _produced_this_session: Dictionary = {}
 
 func _ready():
 	add_child(LevelChrome.new())
+	_build_backdrop()
 	for i in range(RECIPES.size()):
 		_spawn_furnace(i)
 	_build_ui()
 	_refresh()
 	camera.make_current()
+
+# --- 3D backdrop (smelting-floor shell) -----------------------------------------
+
+## Faction-agnostic gameplay (any faction can smelt here), faint
+## faction-tinted look -- same "" -> AEVORIA_COMMONWEALTH fallback
+## level_chrome.gd uses, since a scene opened directly (editor "Run Current
+## Scene", headless smoke test) never goes through LevelContext.start_level().
+func _build_backdrop() -> void:
+	var faction_id = LevelContext.current_faction_id
+	if faction_id == "":
+		faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
+	var palette = FactionVisuals.backdrop_palette(faction_id)
+
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = palette["fog"]
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = palette["light"]
+	env.ambient_light_energy = 0.3
+	env.glow_enabled = false
+	# Real reflections, not just a flat specular highlight -- the furnaces'
+	# glowing windows are what the glossy floor actually has to reflect,
+	# same trick hangar_backdrop.gd uses for its ceiling fixtures.
+	env.ssr_enabled = true
+	env.ssr_max_steps = 48
+	var world_env := WorldEnvironment.new()
+	world_env.environment = env
+	add_child(world_env)
+
+	var floor_mesh := MeshInstance3D.new()
+	var floor_box := BoxMesh.new()
+	floor_box.size = Vector3(FLOOR_HALF_WIDTH * 2.0, 0.2, FLOOR_DEPTH_NEAR - FLOOR_DEPTH_FAR)
+	floor_mesh.mesh = floor_box
+	floor_mesh.position = Vector3(0, -0.1, (FLOOR_DEPTH_NEAR + FLOOR_DEPTH_FAR) * 0.5)
+	var floor_mat := StandardMaterial3D.new()
+	floor_mat.albedo_color = palette["floor"]
+	floor_mat.metallic = 0.5
+	floor_mat.roughness = 0.2
+	floor_mesh.material_override = floor_mat
+	add_child(floor_mesh)
+
+	var back_wall = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(FLOOR_HALF_WIDTH * 2.0, WALL_HEIGHT, 0.4),
+		"albedo_color": palette["wall"],
+	})
+	back_wall.position = Vector3(0, WALL_HEIGHT * 0.5 - 0.1, FLOOR_DEPTH_FAR)
+	add_child(back_wall)
+
+	for x_sign in [-1.0, 1.0]:
+		var side_wall = SimpleShapes.make_mesh_instance({
+			"shape": "box", "size": Vector3(0.4, WALL_HEIGHT, FLOOR_DEPTH_NEAR - FLOOR_DEPTH_FAR),
+			"albedo_color": palette["wall"],
+		})
+		side_wall.position = Vector3(x_sign * FLOOR_HALF_WIDTH, WALL_HEIGHT * 0.5 - 0.1, (FLOOR_DEPTH_NEAR + FLOOR_DEPTH_FAR) * 0.5)
+		add_child(side_wall)
+
+	_build_ducts(palette)
+
+	var key_light = SimpleShapes.make_point_light(palette["light"], 1.0, 20.0)
+	key_light.position = Vector3(0, WALL_HEIGHT, 6.0)
+	add_child(key_light)
+
+## A couple of overhead venting pipes, running across the room above the
+## furnace row -- just enough silhouette to read as "smelting floor with
+## exhaust venting" without competing with the furnaces' own glow for
+## attention.
+func _build_ducts(palette: Dictionary) -> void:
+	var duct_color = palette["wall"]
+	for x_offset in [-2.5, 2.5]:
+		var duct = SimpleShapes.make_mesh_instance({
+			"shape": "cylinder", "radius": DUCT_RADIUS, "height": FLOOR_DEPTH_NEAR - FLOOR_DEPTH_FAR - 4.0,
+			"albedo_color": duct_color,
+		})
+		duct.rotation.x = PI * 0.5
+		duct.position = Vector3(x_offset, DUCT_HEIGHT, (FLOOR_DEPTH_NEAR + FLOOR_DEPTH_FAR) * 0.5)
+		add_child(duct)
 
 func _spawn_furnace(index: int) -> void:
 	var recipe = RECIPES[index]

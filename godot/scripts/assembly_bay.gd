@@ -13,6 +13,8 @@ const Tier1SkinCatalog = preload("res://scripts/tier1_skin_catalog.gd")
 const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const FactionVisuals = preload("res://scripts/faction_visuals.gd")
+const SimpleShapes = preload("res://scripts/simple_shapes.gd")
 
 # Part IDs that count toward the Commonwealth's VCI tracking when a ship
 # including one is saved -- see faction_home_base.gd's
@@ -22,6 +24,29 @@ const SHELTER_PART_ID = "habitat_ring_mk1"
 const POWER_PART_ID = "power_cell_mk1"
 const SANITATION_PART_ID = "waste_recycler_mk1"
 const HEALTHCARE_PART_ID = "medbay_mk1"
+
+## Fabrication-bay shell -- floor, a backdrop wall on all four sides, and a
+## couple of gantry-frame silhouettes, dressing the empty space around
+## PartAssembler's built ships (docs/GRAPHICS_GUIDE.md System 2, same
+## SimpleShapes-plus-own-WorldEnvironment technique as hangar_backdrop.gd,
+## just far simpler since this only has to read as "a fabrication floor"
+## behind the UI panel and the orbiting ship preview). Four walls rather
+## than hangar_backdrop.gd's single fixed-camera-facing wall because this
+## scene's camera orbits a full 360 degrees around the assembled ship
+## (_apply_orbit_camera() above) -- a single backdrop wall would still show
+## empty void once the player dragged the view around behind it. Sized
+## generously past the largest catalog hull (tube_rocket_hull_mk1's 42m,
+## part_catalog.gd) so a big ship doesn't visibly poke through the walls,
+## without trying to match every hull's footprint exactly -- the orbit
+## camera reframes on the ship's own bounds regardless of room size.
+const BAY_HALF_WIDTH := 18.0
+const BAY_HALF_DEPTH := 22.0
+const BAY_WALL_HEIGHT := 12.0
+const GANTRY_HEIGHT := 10.0
+const GANTRY_BEAM_THICKNESS := 0.4
+const GANTRY_X_INSET := 2.0   # how far in from the side walls each gantry frame sits
+const GANTRY_Z_NEAR := BAY_HALF_DEPTH - 5.0
+const GANTRY_Z_FAR := -(BAY_HALF_DEPTH - 5.0)
 
 @onready var assembler: PartAssembler = $PartAssembler
 @onready var camera: Camera3D = $Camera3D
@@ -75,6 +100,7 @@ var _highlight_color_button: ColorPickerButton
 
 func _ready():
 	add_child(LevelChrome.new())
+	_build_backdrop()
 	_catalog = PartCatalog.build_demo_catalog()
 	for part in _catalog:
 		_catalog_by_id[part.part_id] = part
@@ -97,6 +123,88 @@ func _ready():
 	PlayerProfile.badges_updated.connect(_refresh_badge_ui)
 	_refresh_owned_skins()
 	_refresh_badge_ui()
+
+# --- 3D backdrop (fabrication bay shell) ---------------------------------------
+
+## Faction-agnostic gameplay (any faction can kit-bash here), faint
+## faction-tinted look -- same "" -> AEVORIA_COMMONWEALTH fallback
+## level_chrome.gd uses, since a scene opened directly (editor "Run Current
+## Scene", headless smoke test) never goes through LevelContext.start_level().
+func _build_backdrop() -> void:
+	var faction_id = LevelContext.current_faction_id
+	if faction_id == "":
+		faction_id = LevelCatalog.AEVORIA_COMMONWEALTH
+	var palette = FactionVisuals.backdrop_palette(faction_id)
+
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = palette["fog"]
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = palette["light"]
+	env.ambient_light_energy = 0.35
+	env.glow_enabled = false
+	var world_env := WorldEnvironment.new()
+	world_env.environment = env
+	add_child(world_env)
+
+	var floor_mesh = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(BAY_HALF_WIDTH * 2.0, 0.2, BAY_HALF_DEPTH * 2.0),
+		"albedo_color": palette["floor"],
+	})
+	floor_mesh.position = Vector3(0, -0.1, 0)
+	add_child(floor_mesh)
+
+	# Back/front walls run along X, side walls along Z -- a plain enclosed
+	# box around the assembler's build area, nothing fancier (no ribs,
+	# ceiling, or fixtures -- PartAssembler's own preview is the actual
+	# focus of this scene).
+	for z_position in [BAY_HALF_DEPTH, -BAY_HALF_DEPTH]:
+		var wall = SimpleShapes.make_mesh_instance({
+			"shape": "box", "size": Vector3(BAY_HALF_WIDTH * 2.0, BAY_WALL_HEIGHT, 0.4),
+			"albedo_color": palette["wall"],
+		})
+		wall.position = Vector3(0, BAY_WALL_HEIGHT * 0.5 - 0.1, z_position)
+		add_child(wall)
+
+	for x_position in [BAY_HALF_WIDTH, -BAY_HALF_WIDTH]:
+		var wall = SimpleShapes.make_mesh_instance({
+			"shape": "box", "size": Vector3(0.4, BAY_WALL_HEIGHT, BAY_HALF_DEPTH * 2.0),
+			"albedo_color": palette["wall"],
+		})
+		wall.position = Vector3(x_position, BAY_WALL_HEIGHT * 0.5 - 0.1, 0)
+		add_child(wall)
+
+	for x_sign in [-1.0, 1.0]:
+		_build_gantry(x_sign, palette)
+
+	var key_light = SimpleShapes.make_point_light(palette["light"], 1.2, 22.0)
+	key_light.position = Vector3(0, GANTRY_HEIGHT, 6.0)
+	add_child(key_light)
+
+	var accent_light = SimpleShapes.make_point_light(palette["accent"], 0.7, 16.0)
+	accent_light.position = Vector3(0, 4.0, -BAY_HALF_DEPTH + 4.0)
+	add_child(accent_light)
+
+## One simple goalpost-shaped gantry frame (two uprights + a top rail)
+## against a side wall -- the "industrial but not cluttered" fabrication-
+## floor silhouette the room asked for, without a full truss ceiling.
+func _build_gantry(x_sign: float, palette: Dictionary) -> void:
+	var post_x = x_sign * (BAY_HALF_WIDTH - GANTRY_X_INSET)
+
+	for z_position in [GANTRY_Z_NEAR, GANTRY_Z_FAR]:
+		var post = SimpleShapes.make_mesh_instance({
+			"shape": "box", "size": Vector3(GANTRY_BEAM_THICKNESS, GANTRY_HEIGHT, GANTRY_BEAM_THICKNESS),
+			"albedo_color": palette["wall"],
+		})
+		post.position = Vector3(post_x, GANTRY_HEIGHT * 0.5 - 0.1, z_position)
+		add_child(post)
+
+	var rail = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(GANTRY_BEAM_THICKNESS, GANTRY_BEAM_THICKNESS, GANTRY_Z_NEAR - GANTRY_Z_FAR),
+		"albedo_color": palette["wall"],
+	})
+	rail.position = Vector3(post_x, GANTRY_HEIGHT - 0.1, 0.0)
+	add_child(rail)
 
 # --- blueprint lifecycle -----------------------------------------------------
 

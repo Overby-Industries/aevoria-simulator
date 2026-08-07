@@ -13,6 +13,7 @@ extends RefCounted
 ## preload()-only convention.
 
 const LevelCatalog = preload("res://scripts/level_catalog.gd")
+const FactionHomeBase = preload("res://scripts/faction_home_base.gd")
 
 const PATH = "user://solar_system.json"
 
@@ -41,6 +42,14 @@ const NEW_STATION_POPULATION_SILICON = 5
 const FOOD_PER_BIO_POP = 0.4
 const WATER_PER_BIO_POP = 0.4
 const STEEL_PER_SILICON_POP = 0.2
+
+## One supply cycle == one real Earth day. Mission-ops clocks in actual
+## space operations run on real 24h days regardless of who's watching, so
+## the cycle counter advances the same way -- off wall-clock time via
+## process_due_cycles() below, not a manual button press. See
+## level_chrome.gd (runs on every level load, plus a recheck timer for
+## sessions left open) for the only caller.
+const SECONDS_PER_CYCLE = 86400.0
 
 ## Fixed table positions, same "hand-placed slots" spirit as
 ## resource_node_catalog.gd's field -- 12 slots, 30 degrees apart, all at
@@ -71,7 +80,7 @@ static func _default_state() -> Dictionary:
 			"population_biological": STARTING_POPULATION_BIOLOGICAL,
 			"population_silicon": STARTING_POPULATION_SILICON,
 		}
-	return {"claims": claims, "cycle": 0}
+	return {"claims": claims, "cycle": 0, "last_cycle_time": Time.get_unix_time_from_system()}
 
 static func load_state() -> Dictionary:
 	if not FileAccess.file_exists(PATH):
@@ -95,15 +104,69 @@ static func get_claims() -> Dictionary:
 static func get_current_cycle() -> int:
 	return load_state()["cycle"]
 
-## Called once per "Run Supply Cycle" press, in situation_view.gd, after
-## upkeep has already been spent -- advances the one shared clock every
-## faction reads (see cycle_status_panel.gd, docked on every level like
-## VCI/Commons).
+## Advances the one shared clock every faction reads (see
+## cycle_status_panel.gd, docked on every level like VCI/Commons). Only
+## called from process_due_cycles() below -- there's no manual "run a
+## cycle" action anymore, the clock is wall-clock-driven.
 static func advance_cycle() -> int:
 	var state = load_state()
 	state["cycle"] = int(state["cycle"]) + 1
 	save_state(state)
 	return state["cycle"]
+
+## The real-time cycle engine. Compares the shared clock's last-processed
+## timestamp against actual wall-clock time and catches up however many
+## whole 24h periods have elapsed -- called from level_chrome.gd on every
+## level load (so opening the game after being away for a few days catches
+## up correctly, "welcome back" idle-game style) plus a recheck timer for
+## sessions left open across a day rollover.
+##
+## Upkeep for each elapsed cycle is charged against faction_id (the
+## faction currently being played) the same way the old manual "Run Supply
+## Cycle" button charged only the faction viewing the button -- other
+## factions' upkeep catches up next time someone plays them. A cycle that
+## can't be afforded still advances the clock (a real day always passes
+## whether or not the bill got paid) but skips the spend and is reported
+## back as a shortfall rather than driving resources negative.
+##
+## A save with no last_cycle_time yet (pre-existing save from before this
+## feature existed) is treated as "starting now" rather than retroactively
+## charging for however many days-old the save file is.
+static func process_due_cycles(faction_id: String) -> Dictionary:
+	var state = load_state()
+	var now = Time.get_unix_time_from_system()
+	if not state.has("last_cycle_time"):
+		state["last_cycle_time"] = now
+		save_state(state)
+		return {"cycles_run": 0, "cycle": int(state["cycle"]), "shortfalls": []}
+
+	var last_cycle_time = float(state["last_cycle_time"])
+	var elapsed = int(floor((now - last_cycle_time) / SECONDS_PER_CYCLE))
+	if elapsed <= 0:
+		return {"cycles_run": 0, "cycle": int(state["cycle"]), "shortfalls": []}
+
+	var cycle_number = int(state["cycle"])
+	var shortfalls: Array = []
+	for i in range(elapsed):
+		var cost = upkeep_cost(faction_id)
+		var home_state = FactionHomeBase.load_state(faction_id)
+		var affordable = true
+		for resource_name in cost.keys():
+			if float(home_state["resources"].get(resource_name, 0.0)) < float(cost[resource_name]):
+				affordable = false
+		cycle_number = advance_cycle()
+		if affordable:
+			for resource_name in cost.keys():
+				if cost[resource_name] > 0.0:
+					FactionHomeBase.spend_resource(faction_id, resource_name, cost[resource_name])
+		else:
+			shortfalls.append(cycle_number)
+
+	state = load_state()
+	state["last_cycle_time"] = last_cycle_time + float(elapsed) * SECONDS_PER_CYCLE
+	save_state(state)
+
+	return {"cycles_run": elapsed, "cycle": cycle_number, "shortfalls": shortfalls}
 
 static func claim_sector(sector_id: String, faction_id: String, station_name: String) -> void:
 	var state = load_state()

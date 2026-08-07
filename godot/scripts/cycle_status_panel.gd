@@ -6,17 +6,20 @@ extends CanvasLayer
 ## (see level_chrome.gd) so a starvation warning is visible no matter
 ## which level you're standing in, not just inside the Situation View
 ## itself (situation_view.gd's own Civil Engineering panel has the same
-## numbers plus the actual Run Supply Cycle / Grow Population actions --
-## this is the always-on summary).
+## numbers plus the actual Grow Population actions -- this is the
+## always-on summary). The cycle number itself now advances on its own,
+## once per real 24h day (SolarSystemState.process_due_cycles()) -- there
+## is no manual "run a cycle" action anymore.
 ##
 ## Joins the "cycle_status_panel" group and exposes refresh() so
-## situation_view.gd can push a live update after Run Supply Cycle/Grow
-## Population -- otherwise this panel (built once in _ready(), unlike
-## situation_view.gd's own Civil Engineering panel which rebuilds its
-## own labels every action) would keep showing a stale cycle number
-## until the next scene load. group broadcast (call_group), not a
-## direct reference, since LevelChrome owns this panel's construction
-## and never hands the instance back to the level that added it.
+## situation_view.gd can push a live update after Grow Population, and
+## level_chrome.gd can push one after an automatic cycle catch-up --
+## otherwise this panel (built once in _ready(), unlike situation_view.gd's
+## own Civil Engineering panel which rebuilds its own labels every action)
+## would keep showing a stale cycle number until the next scene load.
+## group broadcast (call_group), not a direct reference, since LevelChrome
+## owns this panel's construction and never hands the instance back to the
+## level that added it.
 ##
 ## Same styling convention as vci_commons_panel.gd -- GlassPanelFrame +
 ## GlassPanel.make() background, ThemeBootstrap.theme.

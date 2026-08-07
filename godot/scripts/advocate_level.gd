@@ -8,6 +8,7 @@ extends Node
 ## the base compliance FSM.
 
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const ReefAdvocateBackdrop = preload("res://scripts/reef_advocate_backdrop.gd")
 
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud
@@ -26,7 +27,10 @@ var _finish_button: Button
 var _back_button: Button
 
 func _ready():
-	add_child(LevelChrome.new())
+	var chrome = LevelChrome.new()
+	chrome.light_theme = true
+	add_child(chrome)
+	add_child(ReefAdvocateBackdrop.new())
 	hud.set_monitor(monitor)
 	_build_steps()
 	_build_tutorial_ui()
