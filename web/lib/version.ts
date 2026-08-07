@@ -8,5 +8,5 @@
 // the cur/ submodule is maintained by a separate team/repo, so this file
 // is what keeps the number shown here from silently drifting out of sync
 // with what that submodule actually says.
-export const APP_VERSION = "1.0.15";
+export const APP_VERSION = "1.0.16";
 export const CUR_VERSION = "1.2.0";
