@@ -44,10 +44,12 @@ const EXPANSION_COST = {
 ## Upkeep math itself (Food/Water per biological pop, Steel per silicon
 ## pop) lives in SolarSystemState.upkeep_cost() -- shared with
 ## cycle_status_panel.gd's global HUD readout so the two never disagree.
-## Consumption only happens when "Run Supply Cycle" is pressed --
-## deliberately not a real-time drain, matching every other resource
-## system in this codebase (mining/refining/growing are all explicit
-## player-triggered actions, nothing ticks an economy per-frame).
+## Consumption happens automatically once per real 24h day
+## (SolarSystemState.process_due_cycles(), run from level_chrome.gd on
+## every level load) rather than through a manual button here -- unlike
+## mining/refining/growing, which stay explicit player-triggered actions,
+## the supply-cycle clock is meant to track actual wall-clock time the way
+## real space-operations scheduling would.
 const GROW_BIO_AMOUNT = 3
 const GROW_BIO_FOOD_COST = 10.0
 const GROW_BIO_WATER_COST = 10.0
@@ -88,7 +90,8 @@ var _detail_label: Label
 var _expand_button: Button
 var _enter_button: Button
 var _civil_label: Label
-var _run_cycle_button: Button
+var _inspect_button: Button
+var _zoom_out_button: Button
 var _grow_bio_button: Button
 var _grow_silicon_button: Button
 var _status_label: Label
@@ -318,7 +321,7 @@ func _build_ui() -> void:
 	outer.add_child(header)
 
 	var subheader = Label.new()
-	subheader.text = "Select a sector. Your own stations open onto the Hangar Deck; unclaimed sectors can be built out into a new station."
+	subheader.text = "Select a sector, then Inspect to zoom in on it. Your own stations open onto the Hangar Deck; unclaimed sectors can be built out into a new station."
 	subheader.add_theme_font_size_override("font_size", 10)
 	subheader.add_theme_color_override("font_color", Color(0.6, 0.68, 0.78))
 	subheader.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -336,6 +339,20 @@ func _build_ui() -> void:
 	_sector_list.custom_minimum_size = Vector2(0, 180)
 	_sector_list.item_selected.connect(_on_list_item_selected)
 	outer.add_child(_sector_list)
+
+	var button_row = HBoxContainer.new()
+	button_row.add_theme_constant_override("separation", 8)
+	outer.add_child(button_row)
+
+	_inspect_button = Button.new()
+	_inspect_button.text = "Inspect (zoom in)"
+	_inspect_button.pressed.connect(_on_inspect_pressed)
+	button_row.add_child(_inspect_button)
+
+	_zoom_out_button = Button.new()
+	_zoom_out_button.text = "Zoom Out"
+	_zoom_out_button.pressed.connect(_zoom_out)
+	button_row.add_child(_zoom_out_button)
 
 	_detail_label = Label.new()
 	_detail_label.add_theme_font_size_override("font_size", 11)
@@ -367,11 +384,6 @@ func _build_ui() -> void:
 	_civil_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_civil_label.custom_minimum_size = Vector2(330, 0)
 	outer.add_child(_civil_label)
-
-	_run_cycle_button = Button.new()
-	_run_cycle_button.text = "Run Supply Cycle"
-	_run_cycle_button.pressed.connect(_on_run_cycle_pressed)
-	outer.add_child(_run_cycle_button)
 
 	_grow_bio_button = Button.new()
 	_grow_bio_button.text = "Grow Biological Pop (+%d) at selected station" % GROW_BIO_AMOUNT
@@ -436,9 +448,13 @@ func _refresh_list() -> void:
 
 func _on_list_item_selected(index: int) -> void:
 	_selected_sector_id = _list_index_to_id[index]
-	_zoom_to(_slot_position(_slots_by_id[_selected_sector_id]))
 	_refresh_detail_panel()
 	_refresh_civil_panel()
+
+func _on_inspect_pressed() -> void:
+	if _selected_sector_id == "":
+		return
+	_zoom_to(_slot_position(_slots_by_id[_selected_sector_id]))
 
 func _zoom_to(target: Vector3) -> void:
 	var tween = create_tween()
@@ -516,13 +532,12 @@ func _refresh_civil_panel() -> void:
 			float(state["resources"].get("Potable Water", 0.0)),
 			float(state["resources"].get("Steel", 0.0)),
 		],
+		"Supply cycles run automatically, once per real 24h day.",
 	]
 	if short:
-		lines.append("WARNING: population is at risk of starving -- not enough banked to run a supply cycle. Grow greenhouse/electrolysis/refinery production before adding more population.")
+		lines.append("WARNING: population is at risk of starving -- not enough banked to cover the next automatic supply cycle. Grow greenhouse/electrolysis/refinery production before adding more population.")
 	_civil_label.text = "\n".join(lines)
 	_civil_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.5) if short else Color(0.75, 0.85, 0.95))
-	_run_cycle_button.disabled = short
-	_run_cycle_button.tooltip_text = "" if not short else "Missing (have/need): %s" % _missing_resources_text(state["resources"], cost)
 
 	var selected_claim = _claims.get(_selected_sector_id)
 	var owns_selected = selected_claim != null and selected_claim["faction_id"] == faction_id
@@ -554,20 +569,6 @@ func _on_expand_pressed() -> void:
 	_status_label.text = "Claimed %s. New station founded." % _selected_sector_id
 
 	_refresh_sectors()
-	_refresh_ui()
-
-func _on_run_cycle_pressed() -> void:
-	var faction_id = _current_faction()
-	var cost = SolarSystemState.upkeep_cost(faction_id)
-	var state = FactionHomeBase.load_state(faction_id)
-	if not _can_afford(state["resources"], cost):
-		return
-	for resource_name in cost.keys():
-		if cost[resource_name] > 0.0:
-			FactionHomeBase.spend_resource(faction_id, resource_name, cost[resource_name])
-	var cycle = SolarSystemState.advance_cycle()
-	SystemLog.log("[Situation View] %s ran supply cycle %d: -%.1f Food, -%.1f Potable Water, -%.1f Steel." % [LevelCatalog.faction_label(faction_id), cycle, cost["Food"], cost["Potable Water"], cost["Steel"]])
-	_status_label.text = "Supply cycle %d complete." % cycle
 	_refresh_ui()
 
 func _on_grow_bio_pressed() -> void:

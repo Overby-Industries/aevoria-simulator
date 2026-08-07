@@ -1,8 +1,7 @@
 extends Node
 
 ## The game's front door: pick a level (hardware build vs governance/CUR
-## walkthrough), see faction standing, or drop into the full Main.tscn
-## sandbox that all the earlier demo/dev work still lives in. Login
+## walkthrough) or see faction standing. Login
 ## (account_panel.gd / AccountHud) is declared as a sibling node in
 ## LevelSelect.tscn so it's available from the hub too. Docked top-left;
 ## the resource/status readout is a separate small panel docked top-right,
@@ -17,6 +16,7 @@ const HeroBackdrop = preload("res://scripts/hero_backdrop.gd")
 const ConsoleLogPanel = preload("res://scripts/console_log_panel.gd")
 const VCICommonsPanel = preload("res://scripts/vci_commons_panel.gd")
 const CycleStatusPanel = preload("res://scripts/cycle_status_panel.gd")
+const SolarSystemState = preload("res://scripts/solar_system_state.gd")
 
 const FACTION_IDS = [
 	LevelCatalog.AEVORIA_COMMONWEALTH,
@@ -30,6 +30,16 @@ var _founders_monument: CanvasLayer
 func _ready() -> void:
 	if LevelContext.faction_override != "":
 		_faction_id = LevelContext.faction_override
+	# Level Select is the game's front door and doesn't route through
+	# LevelChrome (see class comment above), so it needs its own catch-up
+	# of the real-time cycle clock -- otherwise a player who only ever
+	# looks at this screen and Situation View's own scenes would never see
+	# the very first catch-up happen before entering a level.
+	var cycle_result = SolarSystemState.process_due_cycles(_faction_id)
+	if int(cycle_result["cycles_run"]) > 0:
+		SystemLog.log("[Solar System] %d supply cycle(s) elapsed in real time -- now at cycle %d." % [cycle_result["cycles_run"], cycle_result["cycle"]])
+		for shortfall_cycle in cycle_result["shortfalls"]:
+			SystemLog.log("[Solar System] WARNING: cycle %d ran short on upkeep -- resources were not enough to cover it." % shortfall_cycle)
 	add_child(HeroBackdrop.new())
 	add_child(ConsoleLogPanel.new())
 	SystemLog.log("Level Select loaded.")
@@ -86,14 +96,6 @@ func _build_ui() -> void:
 		if level["faction_id"] != _faction_id:
 			continue
 		outer.add_child(_build_level_card(level, state))
-
-	outer.add_child(HSeparator.new())
-
-	var sandbox_button = Button.new()
-	sandbox_button.text = "Open Sandbox / Dev Demos"
-	sandbox_button.theme_type_variation = "GlassButton"
-	sandbox_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/Main.tscn"))
-	outer.add_child(sandbox_button)
 
 	add_child(VCICommonsPanel.new(_faction_id))
 	add_child(CycleStatusPanel.new(_faction_id))

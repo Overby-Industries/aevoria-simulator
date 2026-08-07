@@ -14,6 +14,7 @@ extends Node
 ## monitor.submit_operational() directly.
 
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const GovernanceChamberBackdrop = preload("res://scripts/governance_chamber_backdrop.gd")
 
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud
@@ -27,7 +28,10 @@ var _finish_button: Button
 var _back_button: Button
 
 func _ready():
-	add_child(LevelChrome.new())
+	var chrome = LevelChrome.new()
+	chrome.light_theme = true
+	add_child(chrome)
+	add_child(GovernanceChamberBackdrop.new())
 	hud.set_monitor(monitor)
 	_build_steps()
 	_build_tutorial_ui()

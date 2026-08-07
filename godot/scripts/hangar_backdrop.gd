@@ -41,30 +41,101 @@ extends Node3D
 ## convergence toward the back wall -- every position below is hand-placed
 ## against that view, the same "camera never moves, geometry is placed to
 ## fit it" approach hero_backdrop.gd uses for SUN_POSITION.
+##
+## Faction-aware since the retrofit that made Main Hangar Deck one shared
+## scene for all three factions (main_hangar_deck.gd's own doc comment) --
+## the wall/floor/rib colors, the ceiling fixtures' glow, the window glass
+## tint, and the room's ambient/background all now come from the
+## faction_id passed to _init() below (see _apply_faction_palette())
+## instead of being hardcoded "eceef1" white. Everything else on this
+## page -- why there's no bloom, why shadows are off, why the floor is
+## reflective, the exact camera framing -- is unchanged and applies
+## equally to all three faction looks; only material/light color values
+## vary per faction, never the room's geometry.
 
 const SimpleShapes = preload("res://scripts/simple_shapes.gd")
+const FactionVisuals = preload("res://scripts/faction_visuals.gd")
+const LevelCatalog = preload("res://scripts/level_catalog.gd")
 
-const FLOOR_COLOR = Color("eceef1")
-const WALL_COLOR = Color("eceef1")
-const RIB_COLOR = WALL_COLOR
+## Per-faction interior mood -- these replace what used to be FLOOR_COLOR/
+## WALL_COLOR/RIB_COLOR/WINDOW_TINT_COLOR constants (all a flat "eceef1"
+## white/pale-blue glass, from when this room was Commonwealth-only).
+## Populated once by _apply_faction_palette(), called first thing in
+## _ready(), from the faction_id passed to _init() -- they can no longer
+## be compile-time constants once they depend on a constructor argument.
+## _wall_color/_floor_color/_light_color come straight from
+## FactionVisuals.backdrop_palette(); _window_tint_color/_ambient_color/
+## _ambient_energy/_background_color are this file's own per-faction
+## tuning for the extra knobs the shared palette doesn't carry (see
+## _apply_faction_palette()). Commonwealth's values reproduce this file's
+## original hardcoded look almost exactly, per backdrop_palette()'s own
+## doc comment, so Commonwealth barely changes -- the Combine and Flotilla
+## arms are what make the same geometry actually read as three different
+## factions' hangars.
+var _faction_id: String
+var _wall_color: Color
+var _floor_color: Color
+var _rib_color: Color
+var _light_color: Color
+var _window_tint_color: Color
+var _ambient_color: Color
+var _ambient_energy: float
+var _background_color: Color
+
+## Mirrors CycleStatusPanel/VCICommonsPanel's own _init(faction_id) --
+## just stashes the id; the actual palette lookup happens in
+## _apply_faction_palette() at the top of _ready(), same split those two
+## panels use between _init() and _ready().
+func _init(faction_id: String) -> void:
+	_faction_id = faction_id
+
+# Back wall window band -- see _build_back_wall(). Fraction of the wall's
+# own height (0 = floor, 1 = ceiling) where the glass starts; the glass
+# always runs from there to the top, so this is the only knob needed.
+const WINDOW_BOTTOM_FRACTION := 0.55
 
 # 1 unit = 1 meter (this codebase's global scale convention). Full width
-# 40m/~131ft and full depth 50m/~164ft both clear Helga's 30.48m/36.58m
-# with real margin, not a tight fit.
+# 40m/~131ft and full depth 100m/~328ft both clear Helga's 30.48m/36.58m
+# with real margin, not a tight fit. The depth is two of the original 50m
+# hangar back to back (see ARCH_Z_POSITIONS/FIXTURE_Z_POSITIONS below) --
+# the wall that used to close off the first 50m is gone, replaced by one
+# more rib exactly where it stood, so the room just keeps going instead of
+# dead-ending; only the very last copy still has a real end wall.
 const HANGAR_HALF_WIDTH := 20.0
 const HANGAR_DEPTH_NEAR := 20.0   # toward the camera
-const HANGAR_DEPTH_FAR := -30.0   # the back wall
+const HANGAR_DEPTH_FAR := -80.0   # the back wall
 const CEILING_HEIGHT := 12.0
 
+# Shared by the window band (_build_back_wall()) and the catwalk/staircase
+# below, so the platform sits exactly at the window's own bottom edge --
+# "middle of the wall, just below the windows" is this same value, since
+# the window already starts a bit past the wall's actual half-height (see
+# WINDOW_BOTTOM_FRACTION above). lerp(-0.1, CEILING_HEIGHT - 0.1, t) with
+# a = -0.1 and (b - a) = CEILING_HEIGHT simplifies to this.
+const CATWALK_HEIGHT := -0.1 + CEILING_HEIGHT * WINDOW_BOTTOM_FRACTION
+
+# Top of the back wall's solid extent -- also the top of the window band
+# and where it meets the ceiling. Shared by the door frame (reaches all
+# the way up to it) and the catwalk's top rail (set to half this height
+# above CATWALK_HEIGHT), so both stay correct if CEILING_HEIGHT ever
+# changes instead of quietly drifting out of sync with it.
+const WALL_TOP := CEILING_HEIGHT - 0.1
+
 # Ceiling fixture grid -- see _build_lights(). Spaced every 8m in both
-# directions so a big room still reads as evenly lit.
+# directions so a big room still reads as evenly lit. The second half
+# (from -34 on) is the first half's own pattern (16..-24) shifted back by
+# exactly one hangar-length (50m), same as ARCH_Z_POSITIONS below.
 const FIXTURE_X_POSITIONS = [-16.0, -8.0, 0.0, 8.0, 16.0]
-const FIXTURE_Z_POSITIONS = [16.0, 8.0, 0.0, -8.0, -16.0, -24.0]
+const FIXTURE_Z_POSITIONS = [16.0, 8.0, 0.0, -8.0, -16.0, -24.0, -34.0, -42.0, -50.0, -58.0, -66.0, -74.0]
 
 # Structural ribs -- offset from the fixture rows (see FIXTURE_Z_POSITIONS)
 # so a rib never sits directly behind a light row; they read as distinct
-# ceiling elements between the rows of fixtures.
-const ARCH_Z_POSITIONS = [12.0, 4.0, -4.0, -12.0, -20.0]
+# ceiling elements between the rows of fixtures. -30.0 is the seam rib --
+# it sits exactly where the original back wall used to be. Everything from
+# -38.0 on is the original 5-rib pattern (12..-20) shifted back by one
+# hangar-length (50m), i.e. a second copy of the same hangar continuing
+# behind the seam rib, ending at the real back wall (HANGAR_DEPTH_FAR).
+const ARCH_Z_POSITIONS = [12.0, 4.0, -4.0, -12.0, -20.0, -30.0, -38.0, -46.0, -54.0, -62.0, -70.0]
 # How far the ribs' feet sit in front of the side walls' inner faces, so
 # they stay flush with the walls without clipping through them (the walls
 # are centered ON the HANGAR_HALF_WIDTH boundary, so their inner face is
@@ -82,7 +153,53 @@ const RIB_WEB_THICKNESS := 0.12
 const RIB_BASE_PLATE_MARGIN := 0.5
 const RIB_BASE_PLATE_THICKNESS := 0.12
 
+# Staircase (right side, starting out in the open floor where the camera
+# can see it) up to a catwalk that spans the back wall just below the
+# windows (CATWALK_HEIGHT above), which in turn leads to a door frame on
+# the left. See _build_staircase()/_build_catwalk()/_build_door_frame().
+const CATWALK_DEPTH := 2.0        # how far the platform sticks out from the wall
+const CATWALK_WALL_GAP := 0.3     # gap between the platform's back edge and the glass
+const CATWALK_THICKNESS := 0.2
+# Top rail sits halfway up the window band; the mid rail sits halfway
+# between the deck and the top rail. Two "sturdy" horizontal rails read
+# as a real guardrail from across the room, not just a trip-wire.
+const CATWALK_RAIL_HEIGHT := (WALL_TOP - CATWALK_HEIGHT) * 0.5
+const CATWALK_RAIL_MID_HEIGHT := CATWALK_RAIL_HEIGHT * 0.5
+const CATWALK_RAIL_THICKNESS := 0.14
+const CATWALK_POST_THICKNESS := 0.12
+const CATWALK_X_RIGHT := HANGAR_HALF_WIDTH - WALL_INSET
+const CATWALK_X_LEFT := -(HANGAR_HALF_WIDTH - WALL_INSET)
+const CATWALK_Z_BACK := HANGAR_DEPTH_FAR + CATWALK_WALL_GAP
+const CATWALK_Z_FRONT := CATWALK_Z_BACK + CATWALK_DEPTH
+
+# Kept clear of the ceiling ribs' own foot flanges, not just clear of the
+# wall itself -- the last rib (ARCH_Z_POSITIONS' -70.0) lands squarely in
+# the stair run's own Z span, and each rib's flange reaches RIB_HEIGHT*0.5
+# in from its wall centerline (see _build_rib()/_build_beam_segment()), so
+# at the ribs' current 4m depth that's 2m in from the wall -- enough to
+# have been cutting straight through the middle of the old, wider stairs.
+# STAIR_X derives its distance from the wall from RIB_HEIGHT itself so
+# this stays correct if the I-beam size is tuned again later.
+const STAIR_WIDTH := 2.2
+const STAIR_STEPS := 20
+const STAIR_RUN_LENGTH := 11.0    # horizontal distance the stair run covers
+const STAIR_WALL_CLEARANCE := 0.5 # gap between the stair's outer edge and the rib flange's inner face
+const STAIR_X := (HANGAR_HALF_WIDTH - WALL_INSET) - RIB_HEIGHT * 0.5 - STAIR_WALL_CLEARANCE - STAIR_WIDTH * 0.5
+const STAIR_TOP_Z := CATWALK_Z_FRONT       # top step lands on the catwalk's front edge
+const STAIR_BOTTOM_Z := STAIR_TOP_Z + STAIR_RUN_LENGTH  # further from the wall, at floor level
+
+# Full height, catwalk deck to ceiling, and flush against the left wall's
+# own inner face -- DOOR_X is set so the door's LEFT jamb lands right on
+# CATWALK_X_LEFT (the same "flush with the wall" line the ribs/catwalk
+# use), leaving only the right jamb, lintel, and threshold reading as a
+# visible frame from inside the room.
+const DOOR_WIDTH := 2.2
+const DOOR_HEIGHT := WALL_TOP - CATWALK_HEIGHT
+const DOOR_FRAME_THICKNESS := 0.15
+const DOOR_X := CATWALK_X_LEFT + DOOR_WIDTH * 0.5
+
 func _ready() -> void:
+	_apply_faction_palette()
 	_build_environment()
 	_build_floor()
 	_build_walls()
@@ -90,14 +207,51 @@ func _ready() -> void:
 	_build_wall_ceiling_fillets()
 	_build_ceiling_ribs()
 	_build_lights()
+	_build_staircase()
+	_build_catwalk()
+	_build_door_frame()
+
+## Reads this room's base colors from FactionVisuals.backdrop_palette()
+## (see docs/FACTIONS.md for the reasoning behind each faction's look) and
+## fills in the handful of extra values that shared palette doesn't cover
+## but this file still needs: window glass tint, and the environment's
+## ambient/background color+energy (the "haze" the far end of the room
+## fades into -- see _build_environment()'s own doc comment). The
+## Commonwealth arm below is this file's literal original values,
+## unchanged, so its look stays the same; Combine gets a darker, amber-lit,
+## gilded feel and Flotilla a darker, warm-rust feel with a teal-tinted
+## glow, per docs/FACTIONS.md's Combine/Flotilla sections.
+func _apply_faction_palette() -> void:
+	var palette: Dictionary = FactionVisuals.backdrop_palette(_faction_id)
+	_wall_color = palette["wall"]
+	_floor_color = palette["floor"]
+	_rib_color = _wall_color
+	_light_color = palette["light"]
+
+	match _faction_id:
+		LevelCatalog.OLIGARCH_COMBINE:
+			_window_tint_color = Color(0.55, 0.42, 0.22, 0.5)
+			_ambient_color = Color(0.45, 0.36, 0.24)
+			_ambient_energy = 0.5
+			_background_color = Color(0.08, 0.06, 0.04)
+		LevelCatalog.NOMAD_FLOTILLA:
+			_window_tint_color = Color(0.35, 0.55, 0.52, 0.45)
+			_ambient_color = Color(0.42, 0.38, 0.34)
+			_ambient_energy = 0.55
+			_background_color = Color(0.09, 0.08, 0.07)
+		_:
+			_window_tint_color = Color(0.68, 0.78, 0.86, 0.4)
+			_ambient_color = Color(0.88, 0.9, 0.94)
+			_ambient_energy = 0.85
+			_background_color = Color(0.66, 0.69, 0.74)
 
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.66, 0.69, 0.74)
+	env.background_color = _background_color
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.88, 0.9, 0.94)
-	env.ambient_light_energy = 0.85
+	env.ambient_light_color = _ambient_color
+	env.ambient_light_energy = _ambient_energy
 	env.glow_enabled = false
 	# The actual "trick" for floor reflections: screen-space reflections
 	# read the floor's low-roughness material (_floor_material()) and
@@ -107,10 +261,12 @@ func _build_environment() -> void:
 	# see MainHangarDeck.tscn's DirectionalLight3D and the doc comment above.
 	env.ssr_enabled = true
 	env.ssr_max_steps = 64
-	# Atmospheric perspective -- the far end of a 50m room fading gently
+	# Atmospheric perspective -- the far end of a 100m room fading gently
 	# toward the background color instead of staying pin-sharp all the way
 	# back is what actually reads as "far away," the same cue real
 	# haze/dust gives depth over distance outdoors, applied indoors here.
+	# At this length it also does real work hiding the seam rib/back wall
+	# in haze rather than leaving them pin-sharp and obviously far off.
 	env.fog_enabled = true
 	env.fog_light_color = env.background_color
 	env.fog_density = 0.015
@@ -120,7 +276,7 @@ func _build_environment() -> void:
 
 func _floor_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = FLOOR_COLOR
+	mat.albedo_color = _floor_color
 	# Glossy but not a mirror -- a near-zero roughness sharpened SSR's own
 	# ray-march stepping into visible banding on the segmented ribs' shape.
 	mat.metallic = 0.5
@@ -137,26 +293,55 @@ func _build_floor() -> void:
 	add_child(floor_mesh)
 
 func _build_walls() -> void:
-	var back_wall = SimpleShapes.make_mesh_instance({
-		"shape": "box", "size": Vector3(HANGAR_HALF_WIDTH * 2.0, CEILING_HEIGHT, 0.4),
-		"albedo_color": WALL_COLOR,
-	})
-	back_wall.position = Vector3(0, CEILING_HEIGHT * 0.5 - 0.1, HANGAR_DEPTH_FAR)
-	add_child(back_wall)
+	_build_back_wall()
 
 	for x_sign in [-1.0, 1.0]:
 		var side_wall = SimpleShapes.make_mesh_instance({
 			"shape": "box", "size": Vector3(0.4, CEILING_HEIGHT, HANGAR_DEPTH_NEAR - HANGAR_DEPTH_FAR),
-			"albedo_color": WALL_COLOR,
+			"albedo_color": _wall_color,
 		})
 		side_wall.position = Vector3(x_sign * HANGAR_HALF_WIDTH, CEILING_HEIGHT * 0.5 - 0.1, (HANGAR_DEPTH_NEAR + HANGAR_DEPTH_FAR) * 0.5)
 		add_child(side_wall)
+
+## Solid below, one seamless tinted-glass band above -- full width, no
+## mullions/frame dividing it into separate panes, starting a bit above
+## the wall's own half-height and running to its top edge.
+func _build_back_wall() -> void:
+	var wall_bottom = -0.1
+	var wall_top = WALL_TOP
+	var window_bottom = CATWALK_HEIGHT
+
+	var lower = SimpleShapes.make_mesh_instance({
+		"shape": "box", "size": Vector3(HANGAR_HALF_WIDTH * 2.0, window_bottom - wall_bottom, 0.4),
+		"albedo_color": _wall_color,
+	})
+	lower.position = Vector3(0, (wall_bottom + window_bottom) * 0.5, HANGAR_DEPTH_FAR)
+	add_child(lower)
+
+	var window := MeshInstance3D.new()
+	var window_box := BoxMesh.new()
+	window_box.size = Vector3(HANGAR_HALF_WIDTH * 2.0, wall_top - window_bottom, 0.4)
+	window.mesh = window_box
+	window.material_override = _window_material()
+	window.position = Vector3(0, (window_bottom + wall_top) * 0.5, HANGAR_DEPTH_FAR)
+	add_child(window)
+
+## Slightly tinted, translucent glass -- low roughness for a glassy
+## highlight, alpha well under 1 so it reads as glass, not a solid panel
+## the same color as the wall.
+func _window_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = _window_tint_color
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.metallic = 0.2
+	mat.roughness = 0.05
+	return mat
 
 func _build_ceiling() -> void:
 	var ceiling = SimpleShapes.make_mesh_instance({
 		"shape": "box",
 		"size": Vector3(HANGAR_HALF_WIDTH * 2.0, 0.3, HANGAR_DEPTH_NEAR - HANGAR_DEPTH_FAR),
-		"albedo_color": WALL_COLOR,
+		"albedo_color": _wall_color,
 	})
 	ceiling.position = Vector3(0, CEILING_HEIGHT, (HANGAR_DEPTH_NEAR + HANGAR_DEPTH_FAR) * 0.5)
 	add_child(ceiling)
@@ -210,7 +395,7 @@ func _build_fillet_segment(p1: Vector3, p2: Vector3, outward: Vector3, mid_z: fl
 	if length < 0.001:
 		return
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = WALL_COLOR
+	mat.albedo_color = _wall_color
 
 	var beam := MeshInstance3D.new()
 	var box := BoxMesh.new()
@@ -236,7 +421,7 @@ func _build_fillet_segment(p1: Vector3, p2: Vector3, outward: Vector3, mid_z: fl
 ## along their curve rather than by a color difference or a cast shadow.
 func _rib_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = RIB_COLOR
+	mat.albedo_color = _rib_color
 	mat.metallic = 0.15
 	mat.roughness = 0.45
 	return mat
@@ -251,9 +436,10 @@ func _rib_material() -> StandardMaterial3D:
 ## codebase, and straight segments in a tight enough arc read as curved
 ## from this camera distance. Flush with the floor at both feet
 ## (RIB_BASE_Y = 0), each planted on its own base plate. Spans the full
-## wall-to-wall width and reaches full ceiling height -- the back wall
-## itself is plain for now (the cargo door that used to sit in it is
-## being redesigned).
+## wall-to-wall width and reaches full ceiling height -- the real back
+## wall (no door -- that's still being redesigned, but it does have a
+## window band, see _build_back_wall()) only exists at the very end of
+## the room now; see ARCH_Z_POSITIONS for why.
 func _build_ceiling_ribs() -> void:
 	for z_position in ARCH_Z_POSITIONS:
 		_build_rib(z_position)
@@ -348,11 +534,123 @@ func _build_lights() -> void:
 			var fixture = SimpleShapes.make_mesh_instance({
 				"shape": "box", "size": Vector3(1.22, 0.08, 0.15),
 				"albedo_color": Color("f5f8ff"),
-				"emission_color": Color("eaf2ff"), "emission_energy": 3.0,
+				"emission_color": _light_color, "emission_energy": 3.0,
 			})
 			fixture.position = pos
 			add_child(fixture)
 
-			var light = SimpleShapes.make_point_light(Color("eaf2ff"), 1.6, 9.0)
+			var light = SimpleShapes.make_point_light(_light_color, 1.6, 9.0)
 			light.position = Vector3(x_position, CEILING_HEIGHT - 0.5, z_position)
 			add_child(light)
+
+## Shared by the stairs/catwalk/door frame -- same flat white as the
+## walls, plus a faint self-illumination. Without it these thin, distant
+## elements go nearly flat gray in the room's own atmospheric fog (see
+## _build_environment(); the haze itself stays -- it's the whole point of
+## this room reading as genuinely far away) and lose their edges entirely
+## by the time they're ~90-100m from the camera. A small emissive boost
+## keeps them legible without making them look like lit fixtures the way
+## the much brighter ceiling lights do.
+func _architectural_material() -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = _wall_color
+	mat.emission_enabled = true
+	mat.emission = _wall_color
+	mat.emission_energy = 0.4
+	return mat
+
+## A simple straight staircase against the right wall, ascending from the
+## open floor (STAIR_BOTTOM_Z, out where the camera can see it start) up
+## to CATWALK_HEIGHT right at the catwalk's front edge (STAIR_TOP_Z). Each
+## step is one solid box reaching down to the floor rather than a floating
+## tread -- gives the same ascending-block silhouette as a real staircase
+## with a fraction of the geometry, and there's no gap to see through.
+func _build_staircase() -> void:
+	var step_rise = CATWALK_HEIGHT / float(STAIR_STEPS)
+	var step_run = STAIR_RUN_LENGTH / float(STAIR_STEPS)
+	var mat := _architectural_material()
+
+	for i in range(STAIR_STEPS):
+		var top_y = (i + 1) * step_rise
+		var z_far = STAIR_BOTTOM_Z - i * step_run
+		var z_near = STAIR_BOTTOM_Z - (i + 1) * step_run
+		var step := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(STAIR_WIDTH, top_y, z_far - z_near)
+		step.mesh = box
+		step.material_override = mat
+		step.position = Vector3(STAIR_X, top_y * 0.5, (z_far + z_near) * 0.5)
+		add_child(step)
+
+## The catwalk platform + two horizontal rails (top and mid-height) along
+## its front (room-facing) edge only -- the back edge sits close against
+## the glass, so there's nothing to fall off of there. Spans nearly the
+## full width (CATWALK_X_LEFT/RIGHT match the ribs' own wall inset) so the
+## staircase's landing on the right and the door frame on the left both
+## sit within it.
+func _build_catwalk() -> void:
+	var mat := _architectural_material()
+	var center_x = (CATWALK_X_RIGHT + CATWALK_X_LEFT) * 0.5
+	var span_x = CATWALK_X_RIGHT - CATWALK_X_LEFT
+
+	var platform := MeshInstance3D.new()
+	var platform_box := BoxMesh.new()
+	platform_box.size = Vector3(span_x, CATWALK_THICKNESS, CATWALK_Z_FRONT - CATWALK_Z_BACK)
+	platform.mesh = platform_box
+	platform.material_override = mat
+	platform.position = Vector3(center_x, CATWALK_HEIGHT - CATWALK_THICKNESS * 0.5, (CATWALK_Z_FRONT + CATWALK_Z_BACK) * 0.5)
+	add_child(platform)
+
+	for rail_height in [CATWALK_RAIL_MID_HEIGHT, CATWALK_RAIL_HEIGHT]:
+		var rail := MeshInstance3D.new()
+		var rail_box := BoxMesh.new()
+		rail_box.size = Vector3(span_x, CATWALK_RAIL_THICKNESS, CATWALK_RAIL_THICKNESS)
+		rail.mesh = rail_box
+		rail.material_override = mat
+		rail.position = Vector3(center_x, CATWALK_HEIGHT + rail_height, CATWALK_Z_FRONT)
+		add_child(rail)
+
+	var post_count = 8
+	for i in range(post_count + 1):
+		var post_x = lerp(CATWALK_X_LEFT, CATWALK_X_RIGHT, float(i) / float(post_count))
+		var post := MeshInstance3D.new()
+		var post_box := BoxMesh.new()
+		post_box.size = Vector3(CATWALK_POST_THICKNESS, CATWALK_RAIL_HEIGHT, CATWALK_POST_THICKNESS)
+		post.mesh = post_box
+		post.material_override = mat
+		post.position = Vector3(post_x, CATWALK_HEIGHT + CATWALK_RAIL_HEIGHT * 0.5, CATWALK_Z_FRONT)
+		add_child(post)
+
+## A plain white rectangular frame (no separate door panel or cut-out
+## opening) marking a glass door's location, floor-to-ceiling (DOOR_HEIGHT
+## = WALL_TOP - CATWALK_HEIGHT) and flush against the left wall's own
+## inner face -- the window pane behind it stays one seamless piece, per
+## the "simple glass door, just show where it is" request. Flush-left
+## placement means the left jamb sits right on the wall itself, so only
+## the right jamb, lintel, and threshold read as a distinct frame from
+## inside the room -- the same shape a real door built into the corner of
+## a room would have.
+func _build_door_frame() -> void:
+	var mat := _architectural_material()
+	var door_z = HANGAR_DEPTH_FAR + 0.05  # just proud of the glass, avoids z-fighting
+	var half_w = DOOR_WIDTH * 0.5
+	var bottom_y = CATWALK_HEIGHT
+	var top_y = CATWALK_HEIGHT + DOOR_HEIGHT
+
+	for x_offset in [-half_w, half_w]:
+		var jamb := MeshInstance3D.new()
+		var jamb_box := BoxMesh.new()
+		jamb_box.size = Vector3(DOOR_FRAME_THICKNESS, DOOR_HEIGHT, DOOR_FRAME_THICKNESS)
+		jamb.mesh = jamb_box
+		jamb.material_override = mat
+		jamb.position = Vector3(DOOR_X + x_offset, (bottom_y + top_y) * 0.5, door_z)
+		add_child(jamb)
+
+	for y in [bottom_y, top_y]:
+		var bar := MeshInstance3D.new()
+		var bar_box := BoxMesh.new()
+		bar_box.size = Vector3(DOOR_WIDTH + DOOR_FRAME_THICKNESS, DOOR_FRAME_THICKNESS, DOOR_FRAME_THICKNESS)
+		bar.mesh = bar_box
+		bar.material_override = mat
+		bar.position = Vector3(DOOR_X, y, door_z)
+		add_child(bar)

@@ -12,6 +12,7 @@ extends Node
 ## which is how every other level here works.
 
 const LevelChrome = preload("res://scripts/level_chrome.gd")
+const StandingReviewBackdrop = preload("res://scripts/standing_review_backdrop.gd")
 
 @onready var monitor: CURComplianceMonitor = $CURComplianceMonitor
 @onready var hud = $CurHud
@@ -32,7 +33,10 @@ var _finish_button: Button
 var _back_button: Button
 
 func _ready():
-	add_child(LevelChrome.new())
+	var chrome = LevelChrome.new()
+	chrome.light_theme = true
+	add_child(chrome)
+	add_child(StandingReviewBackdrop.new())
 	hud.set_monitor(monitor)
 	monitor.obligation_lapsed.connect(_on_obligation_lapsed)
 	_build_steps()
