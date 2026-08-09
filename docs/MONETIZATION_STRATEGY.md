@@ -1,8 +1,8 @@
-# 🏦 The Aevoric Economic Engine: Stripe Integration Blueprint
+# The Aevoric Economic Engine: Stripe Integration Blueprint
 
 This document outlines the ethical, transparent, and lore-accurate monetization strategy for the Aevoria Simulator. All real-world transactions are processed securely via Stripe, with 100% alignment to the Aevoric Economic Charter.
 
-## 🛍️ Tier 1: The Heritage Fleet Store (Direct Cosmetics)
+## Tier 1: The Heritage Fleet Store (Direct Cosmetics)
 - **Mechanism:** Standard Stripe Checkout (One-time purchases).
 - **Philosophy:** Cultural expression, not power. Players can customize their vessels to reflect their faction's ideology. Because of the Dual-Entity Protocol, players are encouraged to curate distinct aesthetics for their Primary and Franchise accounts.
 ### **Product 1:** The Commonwealth "Stardust Vanguard" Livery Pack
@@ -20,7 +20,7 @@ Price: $9.99
 Description: A limited-edition bundle available only during the Alpha/Beta phase. Includes a unique "Overby Industries Prototype" hull badge, a custom SSTO Starlifter decal, and your name permanently etched into the simulator’s "Founders Monument" loading screen.
 Lore Hook: "You were here when the first shuttle left the pad. The universe remembers."
 Stripe Product Type: One-time purchase (Digital Good + Real-world recognition).
-🛠️ Tier 2: The Modder’s Cooperative (Creator Marketplace)
+Tier 2: The Modder’s Cooperative (Creator Marketplace)
 Mechanism: Stripe Connect (Marketplace / Split Payments).
 Philosophy: Decentralized creation. We do not hoard wealth; we distribute it. Creators keep the vast majority of their earnings, while Overby Industries takes a minimal platform fee to maintain the servers and fund physical R&D.
 The Revenue Split Model
@@ -32,7 +32,7 @@ How It Works (Lore & Mechanics)
 For Creators: Upload your custom 3D models, shader packs, or governance dashboard themes. Set your own price. Get paid directly via Stripe Connect Express.
 For Buyers: Support independent artisans of the Aevoric Commonwealth. Browse the "Cooperative Exchange" in-game and purchase assets with one click.
 The Anti-Monopoly Rule: All mods are reviewed for game balance. No mod can provide unfair resource generation or voting advantages. Purely cosmetic or quality-of-life enhancements are approved.
-🚀 Tier 3: Real-World ISRU Bounties (The Bridge to Reality)
+Tier 3: Real-World ISRU Bounties (The Bridge to Reality)
 Mechanism: Stripe Payment Links (Recurring or One-time Donations mapped to specific milestones).
 Philosophy: Gamers fund the hardware. The hardware updates the game. A transparent, closed-loop economy.
 Bounty 1: The Starlifter II Prototype Fund

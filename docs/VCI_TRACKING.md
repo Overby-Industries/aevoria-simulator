@@ -84,19 +84,19 @@ Current mapping:
 
 | Category | Sub-measure | Status |
 |---|---|---|
-| Biological Life Support | Air (O2 reserves) | ✅ tracked — `O2` resource |
-| | Water (Potable Water reserves) | ✅ tracked — `Potable Water` resource |
-| | Food reserves | ✅ tracked — `Food` resource |
-| | Shelter availability | ✅ tracked — distinct saved ships including `habitat_ring_mk1` (`FactionHomeBase.mark_infrastructure_built`, written from `assembly_bay.gd`'s save handler) |
-| | Sanitation availability | ✅ tracked — distinct saved ships including the `waste_recycler_mk1` part, same mechanism as Shelter |
-| | Basic healthcare access | ✅ tracked — distinct saved ships including the `medbay_mk1` part, same mechanism as Shelter |
-| Silicon-Based Life Support | Electrical power continuity | ✅ tracked — distinct saved ships including `power_cell_mk1`, same mechanism as Shelter above |
+| Biological Life Support | Air (O2 reserves) | tracked — `O2` resource |
+| | Water (Potable Water reserves) | tracked — `Potable Water` resource |
+| | Food reserves | tracked — `Food` resource |
+| | Shelter availability | tracked — distinct saved ships including `habitat_ring_mk1` (`FactionHomeBase.mark_infrastructure_built`, written from `assembly_bay.gd`'s save handler) |
+| | Sanitation availability | tracked — distinct saved ships including the `waste_recycler_mk1` part, same mechanism as Shelter |
+| | Basic healthcare access | tracked — distinct saved ships including the `medbay_mk1` part, same mechanism as Shelter |
+| Silicon-Based Life Support | Electrical power continuity | tracked — distinct saved ships including `power_cell_mk1`, same mechanism as Shelter above |
 | | Computational / data / memory / comms continuity | baseline — no silicon-based-life system exists in the game yet at all |
-| Infrastructure Resilience | Reserve capacity | ✅ tracked — banked `PGM`/`Gold`/`Platinum`/`Steel` |
-| | Life-support surplus | ✅ tracked — `O2`/`Potable Water`/`Food` banked *beyond* their Biological Life Support target, a second reserve-capacity signal from the same resources |
-| | System redundancy | ✅ tracked — average across Shelter/Power/Sanitation/Healthcare of distinct built ships *beyond* `BUILT_TARGETS`' base "sufficient" count |
+| Infrastructure Resilience | Reserve capacity | tracked — banked `PGM`/`Gold`/`Platinum`/`Steel` |
+| | Life-support surplus | tracked — `O2`/`Potable Water`/`Food` banked *beyond* their Biological Life Support target, a second reserve-capacity signal from the same resources |
+| | System redundancy | tracked — average across Shelter/Power/Sanitation/Healthcare of distinct built ships *beyond* `BUILT_TARGETS`' base "sufficient" count |
 | | Recovery capability / distribution network reliability | baseline — no system yet |
-| Accessibility | Service availability | ✅ tracked — banked `CompliancePoints`, as a thin proxy for "the CUR/governance apparatus is functioning" |
+| Accessibility | Service availability | tracked — banked `CompliancePoints`, as a thin proxy for "the CUR/governance apparatus is functioning" |
 | | Distribution effectiveness / equity / consistency | baseline — only one faction/player exists, nothing to be inequitable about yet |
 
 **Shelter/Power/Sanitation/Healthcare scoring**: `FactionHomeBase.mark_infrastructure_built(faction_id, category, ship_id)` records a *distinct* ship id per category (deduped, so re-saving the same ship after a paint job doesn't inflate the count). `vci_tracker.gd`'s `BUILT_TARGETS` currently considers 3 distinct ships equipped with the relevant part (`habitat_ring_mk1`, `power_cell_mk1`, `waste_recycler_mk1`, `medbay_mk1` respectively) "fully sufficient" — a floor to build real numbers up from later, not a researched target, same spirit as the resource `TARGETS` above. The habitat ring gained two new sockets (`sanitation_mount`, `medbay_mount`) to carry the last two parts — `PART_CAT_WASTE_RECYCLER` already existed in `src/part_types.h` unused since the original kit-bashing pass, so only the Medbay category (`PART_CAT_MEDBAY`) needed a new C++ enum entry + rebuild.
