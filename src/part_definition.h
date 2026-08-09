@@ -14,6 +14,7 @@
 // aggregate mass/power/life-support numbers.
 
 #include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/classes/packed_scene.hpp>
 #include <godot_cpp/classes/resource.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/variant/array.hpp>
@@ -41,6 +42,18 @@ private:
 
     // {"shape": "box"|"cylinder"|"capsule", "size": Vector3, "radius": float, "height": float}
     Dictionary mesh_recipe;
+
+    // Optional hand-modeled replacement for mesh_recipe's procedural build --
+    // the same "seam" pattern as helga-flight-sim's HelgaAirframeVisual
+    // (build/refine geometry in XFLR5, detail in Blender, export glTF into
+    // godot/models/, assign the resulting PackedScene here). Null (the
+    // default) means keep using mesh_recipe below -- assigning this later
+    // is a zero-behavior-change swap for every part that already has one,
+    // nothing else in the pipeline (sockets, stats, skin texture) needs to
+    // change, since build_mesh_node() is the one place every caller
+    // (PartAssembler::assemble(), a part-palette preview) already goes
+    // through.
+    Ref<PackedScene> imported_model;
 
     // Array of {"id": String, "position": Vector3, "rotation_deg": Vector3, "accepts": int}
     Array sockets;
@@ -74,6 +87,9 @@ public:
     void set_mesh_recipe(const Dictionary &p_recipe);
     Dictionary get_mesh_recipe() const;
 
+    void set_imported_model(const Ref<PackedScene> &p_model);
+    Ref<PackedScene> get_imported_model() const;
+
     void set_sockets(const Array &p_sockets);
     Array get_sockets() const;
 
@@ -88,8 +104,10 @@ public:
     // Finds a socket entry by id; returns an empty Dictionary if not found.
     Dictionary find_socket(const String &socket_id) const;
 
-    // Builds a fresh MeshInstance3D from mesh_recipe. Bound so a part palette
-    // UI can preview a single part without going through PartAssembler.
+    // Builds a fresh visual node for this part: imported_model if one's been
+    // assigned, otherwise a procedural mesh built from mesh_recipe. Bound so
+    // a part palette UI can preview a single part without going through
+    // PartAssembler.
     Node3D *build_mesh_node() const;
 
 private:
