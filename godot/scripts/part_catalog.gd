@@ -115,6 +115,19 @@ static func build_demo_catalog() -> Array:
 
 	# Faction-exclusive hulls -- same fore/aft socket shape as hull_mk1 so
 	# thruster_mk1/drill_arm_mk1 still fit, but each is gated to one faction.
+	#
+	# imported_model seam: PartDefinition.build_mesh_node() (src/
+	# part_definition.cpp) uses ssto_hull.imported_model instead of
+	# mesh_recipe below the moment one is assigned -- same pattern as
+	# helga-flight-sim's HelgaAirframeVisual. Once Helga's XFLR5/Blender
+	# model is exported as a .glb into godot/models/, wire it in with one
+	# line here, e.g.:
+	#   ssto_hull.imported_model = load("res://models/helga.glb")
+	# Sockets/stats/skin texture below are untouched by that swap -- the
+	# fore/aft socket positions already assume the fuselage's own origin
+	# sits at its center with the nose at -18.29 and tail at +18.29, so
+	# match that in Blender and the drill arm/thruster will still attach
+	# in the right place with no further changes.
 	var ssto_hull := PartDefinition.new()
 	ssto_hull.part_id = "ssto_hull_helga"
 	ssto_hull.display_name = "SSTO Hull -- Project Helga"

@@ -5,7 +5,9 @@
 #include <godot_cpp/classes/capsule_mesh.hpp>
 #include <godot_cpp/classes/cylinder_mesh.hpp>
 #include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/node.hpp>
 #include <godot_cpp/classes/surface_tool.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 #include <godot_cpp/variant/vector3.hpp>
 
 using namespace godot;
@@ -71,6 +73,8 @@ void PartDefinition::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_faction_id"), &PartDefinition::get_faction_id);
     ClassDB::bind_method(D_METHOD("set_mesh_recipe", "recipe"), &PartDefinition::set_mesh_recipe);
     ClassDB::bind_method(D_METHOD("get_mesh_recipe"), &PartDefinition::get_mesh_recipe);
+    ClassDB::bind_method(D_METHOD("set_imported_model", "model"), &PartDefinition::set_imported_model);
+    ClassDB::bind_method(D_METHOD("get_imported_model"), &PartDefinition::get_imported_model);
     ClassDB::bind_method(D_METHOD("set_sockets", "sockets"), &PartDefinition::set_sockets);
     ClassDB::bind_method(D_METHOD("get_sockets"), &PartDefinition::get_sockets);
     ClassDB::bind_method(D_METHOD("set_stats", "stats"), &PartDefinition::set_stats);
@@ -85,6 +89,8 @@ void PartDefinition::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::INT, "category"), "set_category", "get_category");
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "faction_id"), "set_faction_id", "get_faction_id");
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "mesh_recipe"), "set_mesh_recipe", "get_mesh_recipe");
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "imported_model", PROPERTY_HINT_RESOURCE_TYPE, "PackedScene"),
+                 "set_imported_model", "get_imported_model");
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "sockets"), "set_sockets", "get_sockets");
     ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "stats"), "set_stats", "get_stats");
 
@@ -128,6 +134,9 @@ String PartDefinition::get_faction_id() const { return faction_id; }
 void PartDefinition::set_mesh_recipe(const Dictionary &p_recipe) { mesh_recipe = p_recipe; }
 Dictionary PartDefinition::get_mesh_recipe() const { return mesh_recipe; }
 
+void PartDefinition::set_imported_model(const Ref<PackedScene> &p_model) { imported_model = p_model; }
+Ref<PackedScene> PartDefinition::get_imported_model() const { return imported_model; }
+
 void PartDefinition::set_sockets(const Array &p_sockets) { sockets = p_sockets; }
 Array PartDefinition::get_sockets() const { return sockets; }
 
@@ -153,6 +162,29 @@ Dictionary PartDefinition::find_socket(const String &socket_id) const {
 }
 
 Node3D *PartDefinition::build_mesh_node() const {
+    // The imported-model seam (see part_definition.h's comment on
+    // imported_model): if a real hand-modeled scene has been assigned, it
+    // wins outright -- mesh_recipe below never even gets read. A glTF
+    // import's root is always a Node3D (often a MeshInstance3D itself,
+    // which is-a Node3D), so this covers every shape branch uniformly,
+    // including build_winged_fuselage() -- an imported hull replaces the
+    // whole composite, not just one piece of it. Sockets/stats/skin texture
+    // are untouched either way: they're PartDefinition/PartAssembler-level
+    // data, never derived from the mesh itself.
+    if (imported_model.is_valid()) {
+        Node *instance = imported_model->instantiate();
+        Node3D *node3d = Object::cast_to<Node3D>(instance);
+        if (node3d != nullptr) {
+            node3d->set_name(display_name.is_empty() ? part_id : display_name);
+            return node3d;
+        }
+        UtilityFunctions::push_warning("PartDefinition::build_mesh_node: imported_model's root for part '",
+                                       part_id, "' is not a Node3D -- falling back to the procedural mesh_recipe.");
+        if (instance != nullptr) {
+            instance->queue_free();
+        }
+    }
+
     String shape = mesh_recipe.get("shape", "box");
 
     if (shape == "winged_fuselage") {
