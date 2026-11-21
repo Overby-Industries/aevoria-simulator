@@ -79,7 +79,9 @@ export default function AevoriaScene() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    // Capture the node now: by cleanup time React may already have cleared the ref.
+    const container = containerRef.current;
+    if (!container) return;
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -101,7 +103,7 @@ export default function AevoriaScene() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     // Lights
     const ambientLight = new THREE.AmbientLight(0x333366, 0.5);
@@ -184,7 +186,6 @@ export default function AevoriaScene() {
     // mouseButtons mapping (see three/examples/jsm/controls/OrbitControls.js),
     // which blocks the browser's right-click menu (including "Inspect").
     // Removing its own listener restores normal right-click.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     renderer.domElement.removeEventListener('contextmenu', (controls as any)._onContextMenu);
 
     // Animation loop
@@ -212,9 +213,7 @@ export default function AevoriaScene() {
       window.removeEventListener('resize', onResize);
       cancelAnimationFrame(animationFrameId); // Stop the render loop
       renderer.dispose();
-      if (containerRef.current) {
-        containerRef.current.removeChild(renderer.domElement);
-      }
+      container.removeChild(renderer.domElement);
     };
   }, []); // <-- EMPTY DEPENDENCY ARRAY: Run once on mount, clean up on unmount
 

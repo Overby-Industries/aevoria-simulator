@@ -51,7 +51,6 @@ export default async function AdminReviewPage() {
         {items.map((skin) => (
           <div key={skin.id} style={styles.card}>
             {skin.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={skin.previewUrl} alt={skin.title} style={styles.previewImage} />
             ) : (
               <p style={styles.text}>(3D asset — {skin.storage_path})</p>

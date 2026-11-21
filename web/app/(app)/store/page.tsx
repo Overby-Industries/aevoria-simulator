@@ -62,7 +62,6 @@ export default async function StorePage({
         {items.map((item) => (
           <div key={item.priceId} style={styles.card}>
             {item.image && (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={item.image} alt={item.name} style={styles.image} />
             )}
             <h2 style={styles.itemName}>{item.name}</h2>
