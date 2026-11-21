@@ -53,7 +53,6 @@ export default async function MarketplacePage({
         {items.map((skin) => (
           <div key={skin.id} style={styles.card}>
             {skin.previewUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={skin.previewUrl} alt={skin.title} style={styles.image} />
             ) : (
               <div style={styles.filePlaceholder}>3D asset</div>
