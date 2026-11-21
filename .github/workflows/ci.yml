@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  web:
+    name: Web app (type-check, lint, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      # The build needs these variables to exist, not to be real: nothing here
+      # contacts Supabase or Stripe. Placeholder values, never secrets, and
+      # none of them is a live key.
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  # The GDExtension is built for Windows in practice, and MSVC accepts things
+  # GCC does not -- a missing <string> include once stopped the Linux build at
+  # src/part_assembler.h. Compiling it with GCC keeps that class of error out.
+  # This checks that the C++ compiles and links; it does not load the result in
+  # Godot, which the .gdextension manifest (Windows libraries only) would not
+  # let it do on Linux.
+  gdextension:
+    name: GDExtension compiles (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive   # godot-cpp and cur
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install SCons
+        run: pip install scons
+
+      - name: Build
+        run: scons platform=linux target=template_debug -j4
